@@ -1,5 +1,6 @@
 % ---------------------------------------------------------------------------------------
-% This script plots some observation data from the .mat files obtained with readRinex.m.
+% This script plots some observation data in the .mat files that can be obtained with 
+% 'readRinex.m'.
 % 
 % To select the input data file: change 'dataFileName'
 % ---------------------------------------------------------------------------------------
@@ -14,6 +15,8 @@ set(groot,'defaultLineLineWidth',0.8)
 nSats   =   32;         %    []     Total number of satellites      
 c       =   299792458;  %   [m/s]   Light speed
 fL1     =   1.57542e9;  %   [Hz]    Frequency of L1 band
+
+mkSize  =   12;         %    []     Marker size for plots
 
 %% FILE LOADING
 dataFileName = 'Data/Structs/static.mat';
@@ -55,7 +58,8 @@ mC1Any(mC1Any==0) = nan;        % Changing values 0 for NaN so these aren't plot
 
 figure;
 for sat = 1:length(satsC1)
-    plot(tAxis, mC1Any(:, sat).', 'color', mColors(satsC1(sat), :)); hold on
+    plot(tAxis, mC1Any(:, sat).', '.',  'MarkerSize', mkSize,'color', mColors(satsC1(sat), :)); 
+    hold on
 end
 hold off
 legend(cellstr(num2str(satsC1')),'Location','bestoutside');
@@ -70,7 +74,8 @@ mS1Any(mS1Any==0) = nan;        % Changing values 0 for NaN so these aren't plot
 
 figure;
 for sat = 1:length(satsS1)
-    plot(tAxis, mS1Any(:, sat).', 'color', mColors(satsS1(sat), :)); hold on
+    plot(tAxis, mS1Any(:, sat).', '.', 'MarkerSize', mkSize, 'color', mColors(satsS1(sat), :));
+    hold on
 end
 hold off
 legend(cellstr(num2str(satsS1')),'Location','bestoutside');
@@ -78,25 +83,24 @@ title('Evolution of measured C/No over time');
 xlabel('Epoch'); ylabel('C/No [dB-Hz]');
 
 % CMC for satellites in view
-mL1m        =   mL1 .* c/fL1;       % Transformation from cycles to meters
-mCMC1       =   mC1 - mL1;          % CMC computation
+mL1m        =   mL1 .* c/fL1;         % Transformation from cycles to meters
+mCMC1       =   mC1 - mL1;            % CMC computation
 mCMC1Any    =   mCMC1(:, any(mCMC1)); % Finding numbers of satellites from which there's CMC
 satsCMC1    =   find(mCMC1(1,:));     % Finding numbers of satellites from which there's S1
 
-mCMC1Any(mCMC1Any==0) = nan;        % Changing values 0 for NaN so these aren't plotted
+mCMC1Res    =   mCMC1Any - mean(mCMC1Any, 2); % Subtract the average to get rid of the ambiguity
+
+mCMC1Res(mCMC1Res==0) = nan;        % Changing values 0 for NaN so these aren't plotted
 
 figure;
 for sat = 1:length(satsCMC1)
-    plot(tAxis, mCMC1Any(:, sat).', 'color', mColors(satsCMC1(sat), :)); hold on
+    plot(tAxis, mCMC1Res(:, sat).', '.', 'MarkerSize', mkSize, 'color', mColors(satsCMC1(sat), :)); 
+    hold on
 end
 hold off
 legend(cellstr(num2str(satsCMC1')),'Location','bestoutside');
-title('Evolution of measured CMC over time');
+title('Evolution of measured CMC - E(CMC) over time');
 xlabel('Epoch'); ylabel('CMC [m]');
-
-
-
-
 
 
 
