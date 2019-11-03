@@ -19,7 +19,7 @@ fL1     =   1.57542e9;  %   [Hz]    Frequency of L1 band
 mkSize  =   12;         %    []     Marker size for plots
 
 %% FILE LOADING
-dataFileName = 'Data/Structs/static.mat';
+dataFileName = 'Data/Structs/multipath.mat';
 load(dataFileName);
 
 %% DATA EXTRACTION

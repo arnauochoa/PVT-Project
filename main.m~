@@ -28,31 +28,19 @@ nEpoch_max = length(ObsData.DATA); % For all epochs -> length(ObsData.DATA)
 for iEpoch = 1:Nb_Epoch
     
     % Find the PRNs of the tracked satellites at current epoch
-    trackedPRN  =   find(mTracked(iEpoch, :)); 
+    trackedPRN = find(mTracked(iEpoch, :)); 
     
     % Find the valid ephemeris at the current epoch (toe-2h < t < toe+2h)
-    mValEphem   =   mEphem(                         ...
+    mValEphem = mEphem(                             ...
         mEphem(:,13) - ephTime/2 < mEpoch(iEpoch,2) ...
         &                                           ...
         mEphem(:,13) + ephTime/2 > mEpoch(iEpoch,2) ...
-        , :                                         ...
-    );
+    , :);
     
-    epochTime   =   mEpoch(iEpoch,2);   % Rx time in seconds of week
+    % TODO: Correct time
+    tSoW    =   mEpoch(iEpoch,2);   % Rx time in seconds of week
     
-    nTrackedSat =   length(trackedPRN);
-    mSatPos     =   zeros(nTrackedSat, 3);
-    
-    for iSat = 1:nTrackedSat
-        % Take ephemeris of current satellite
-        satEphem            =   mValEphem(mValEphem(:, 1) == trackedPRN(iSat) , :);
-        
-        % TODO: Correct time
-        satTime             =   getSatTime(satEphem, epochTime, mC1(iEpoch, iSat));
-        
-        mSatPos(iSat, :)    =   getSatPos(satEphem, satTime);
-        
-    end
+    mSatPos =   getSatPos(mValEphem, trackedPRN, tSoW);
     
     a=0;
     
