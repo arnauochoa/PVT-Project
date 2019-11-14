@@ -14,9 +14,8 @@ function [satPos] = getSatPos(satEphem, txTime, epochTime)
 % ---------------------------------------------------------------------------------------
     
     % Constants
-    mu      =   3.986005e14;  % [m^3/s^2]  Gravitational constant
-    omegaE  =   7.2921151467e-5;     %  [rad/s]   Earth’s angular velocity
-    PI      =   3.1415926535898; 
+    mu      =   3.986004418e14;  % [m^3/s^2]  Gravitational constant
+    omegaE  =   7.292115e-5;     %  [rad/s]   Earth’s angular velocity
     
     % Ephemeris parameters
     t0e         =   satEphem(13); % Ephemerides reference epoch in seconds of the week
@@ -42,34 +41,45 @@ function [satPos] = getSatPos(satEphem, txTime, epochTime)
     tK  =   checkTime(tK);
 
     mK  =   m0 + (sqrt(mu)/sqrtA^3 + deltaN) * tK;
-    mK  =   rem(mK + 2*PI, 2*PI);
+    mK  =   rem(mK + 2*pi, 2*pi);
 
-    eK  =   findEccAnomaly(mK, ecc);
+    % Iterative solution of Mk = Ek + e*sin(Ek)
+    dE  =   Inf;
+    eK  =   mK;
+    i   =   1;
+    while abs(dE) > 1e-12 && i < 10
+        oldEk   =   eK;
+        eK      =   mK + ecc*sin(eK);
+        dE      =   rem(eK-oldEk, 2*pi); %repeat this for the rest
+        i       =   i+1;
+    end
+    eK  =   rem(eK + 2*pi, 2*pi);
 
     vK  =   atan2(sqrt(1-ecc^2) * sin(eK), cos(eK) - ecc);
 
     phi =   omega + vK;
-    phi =   rem(phi + 2*PI, 2*PI);
+    phi =   rem(phi + 2*pi, 2*pi);
 
     uK  =   phi                           + cUC * cos(2*phi) + cUS * sin(2*phi);
     rK  =   sqrtA^2 * (1 - ecc * cos(eK)) + cRC * cos(2*phi) + cRS * sin(2*phi);
     iK  =   i0 + iDot * tK                + cIC * cos(2*phi) + cIS * sin(2*phi);
 
     lambdaK =   omega0 + (omegaDot - omegaE) * tK - omegaE * t0e;
-    lambdaK =   rem(lambdaK + 2*PI, 2*PI);
+    lambdaK =   rem(lambdaK + 2*pi, 2*pi);
 
     mR1I    =   rotx(rad2deg(iK));
     mR3L    =   rotz(rad2deg(lambdaK));
     mR3U    =   rotz(rad2deg(uK));
     rVec    =   [rK 0 0].';
 
-    satPos1  =   mR3L * mR1I * mR3U * rVec;
+    satPos  =   mR3L * mR1I * mR3U * rVec;
     
     % Take into account earth rotation
     travelTime  =   epochTime - txTime;
     omegaTau    =   omegaE * travelTime;
     
-    mR3         =   rotz(-rad2deg(omegaTau));
-    satPos      =   mR3 * satPos1;
+    mR3         =   rotz(-omegaTau);
+    satPos      =   mR3 * satPos;
+    
 end
 

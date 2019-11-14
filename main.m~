@@ -33,26 +33,34 @@ for iEpoch = 1:Nb_Epoch
     % Find the PRNs of the tracked satellites at current epoch
     trackedPRN  =   find(mTracked(iEpoch, :)); 
     
-    % Rx time in seconds of week
-    epochTime   =   mEpoch(iEpoch, 2);
+    % Find the valid ephemeris at the current epoch (toe-2h < t < toe+2h)
+%     mValEphem   =   mEphem(                         ...
+%         mEphem(:,13) - ephTime/2 < mEpoch(iEpoch,2) ...
+%         &                                           ...
+%         mEphem(:,13) + ephTime/2 > mEpoch(iEpoch,2) ...
+%         , :                                         ...
+%     );
+    
+    epochTime   =   mEpoch(iEpoch, 2);   % Rx time in seconds of week
     
     nTrackedSat =   length(trackedPRN);
-    mSatPos     =   nan(nTrackedSat, 3);
+    mSatPos     =   zeros(nTrackedSat, 3);
     
     for iSat = 1:nTrackedSat
         svPRN   =   trackedPRN(iSat);
-        
-        % Find the valid ephemeris at the current epoch for the current
-        % satellite
-        satEphem            =   SelectEphemeris(mEphem, svPRN, epochTime);
-        
         % TODO: check sat's health
+        
+        % Take ephemeris of current satellite
+%         satEphem            =   mValEphem(mValEphem(:, 1) == trackedPRN(iSat) , :);
 
-        txTime              =   getSatTxTime(satEphem, epochTime, mC1(iEpoch, svPRN));
+        satEphem            =   SelectEphemeris(mEphem, svPrN, epochTime);
+
+        txTime              =   getSatTxTime(satEphem, epochTime, mC1(iEpoch, iSat));
         
         mSatPos(iSat, :)    =   getSatPos(satEphem, txTime, epochTime);
     end
     
+    a=0;
     
     % TODO: Call function that iterates over LS
     
