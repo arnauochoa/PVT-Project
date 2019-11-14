@@ -18,11 +18,14 @@ load(dataFileName);
 
 %% DATA EXTRACTION
 % Extraction of data into matrices
-nEpoch_max = length(ObsData.DATA); % For all epochs -> length(ObsData.DATA)
+nEpoch_max = 760; % For all epochs -> length(ObsData.DATA)
 [mEpoch, Nb_Epoch, vNb_Sat, Total_Nb_Sat, mTracked, mC1, mL1, mD1, mS1] = ...
     ExtractData_O(ObsData.DATA, nEpoch_max);
 
 [ionoA, ionoB, mEphem] = ExtractData_N(NavData.HEADER, NavData.DATA);
+
+%% Data structures initialisation
+SatPos1     =   zeros(3, Nb_Epoch);
 
 %% EPOCH LOOP
 for iEpoch = 1:Nb_Epoch
@@ -30,31 +33,26 @@ for iEpoch = 1:Nb_Epoch
     % Find the PRNs of the tracked satellites at current epoch
     trackedPRN  =   find(mTracked(iEpoch, :)); 
     
-    % Find the valid ephemeris at the current epoch (toe-2h < t < toe+2h)
-    mValEphem   =   mEphem(                         ...
-        mEphem(:,13) - ephTime/2 < mEpoch(iEpoch,2) ...
-        &                                           ...
-        mEphem(:,13) + ephTime/2 > mEpoch(iEpoch,2) ...
-        , :                                         ...
-    );
-    
-    epochTime   =   mEpoch(iEpoch,2);   % Rx time in seconds of week
+    % Rx time in seconds of week
+    epochTime   =   mEpoch(iEpoch, 2);
     
     nTrackedSat =   length(trackedPRN);
-    mSatPos     =   zeros(nTrackedSat, 3);
+    mSatPos     =   nan(nTrackedSat, 3);
     
     for iSat = 1:nTrackedSat
-        % Take ephemeris of current satellite
-        satEphem            =   mValEphem(mValEphem(:, 1) == trackedPRN(iSat) , :);
+        svPRN   =   trackedPRN(iSat);
         
-        % TODO: Correct time
-        satTime             =   getSatTime(satEphem, epochTime, mC1(iEpoch, iSat));
+        % Find the valid ephemeris at the current epoch for the current
+        % satellite
+        satEphem            =   SelectEphemeris(mEphem, svPRN, epochTime);
         
-        mSatPos(iSat, :)    =   getSatPos(satEphem, satTime);
+        % TODO: check sat's health
+
+        txTime              =   getSatTxTime(satEphem, epochTime, mC1(iEpoch, svPRN));
         
+        mSatPos(iSat, :)    =   getSatPos(satEphem, txTime, epochTime);
     end
     
-    a=0;
     
     % TODO: Call function that iterates over LS
     
@@ -64,4 +62,17 @@ for iEpoch = 1:Nb_Epoch
 end
 
 %% RESULT ANALYSIS
+figure;
+plot(1:Nb_Epoch, SatPos1(1, :));
+xlabel('Epoch'); ylabel('X coordinate');
+
+figure;
+plot(1:Nb_Epoch, SatPos1(2, :));
+xlabel('Epoch'); ylabel('Y coordinate');
+
+figure;
+plot(1:Nb_Epoch, SatPos1(3, :));
+xlabel('Epoch'); ylabel('Z coordinate');
+
+
 
