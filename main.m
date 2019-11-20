@@ -36,26 +36,7 @@ for iEpoch = 1:Nb_Epoch
     % Rx time in seconds of week
     epochTime   =   mEpoch(iEpoch, 2);
     
-    nTrackedSat =   length(trackedPRN);
-    mSatPos     =   nan(nTrackedSat, 3);
-    
-    for iSat = 1:nTrackedSat
-        svPRN   =   trackedPRN(iSat);
-        
-        % Find the valid ephemeris at the current epoch for the current
-        % satellite
-        satEphem            =   SelectEphemeris(mEphem, svPRN, epochTime);
-        
-        % TODO: check sat's health
-
-        txTime              =   getSatTxTime(satEphem, epochTime, mC1(iEpoch, svPRN));
-        
-        mSatPos(iSat, :)    =   getSatPos(satEphem, txTime, epochTime);
-    end
-    
-    
-    % TODO: Call function that iterates over LS
-    
+    pvt = estimatePVT(trackedPRN, mC1(iEpoch, :), mEphem, epochTime);
     
     % TODO: Call function to transform XYZ pos to LLH pos
     
