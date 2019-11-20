@@ -13,7 +13,7 @@ addpath(genpath('Library'));
 ephTime     =   14400;    %  [s]    Time of validity of ephemeris data
 
 %% FILE LOADING
-dataFileName = 'Data/Structs/givenData.mat';
+dataFileName = 'Data/Structs/static.mat';
 load(dataFileName);
 
 %% DATA EXTRACTION
@@ -25,7 +25,8 @@ nEpoch_max = 760; % For all epochs -> length(ObsData.DATA)
 [ionoA, ionoB, mEphem] = ExtractData_N(NavData.HEADER, NavData.DATA);
 
 %% Data structures initialisation
-SatPos1     =   zeros(3, Nb_Epoch);
+SatPos1     =   zeros(3, Nb_Epoch); % <<<<<<<< Provisional
+mPosLLH     =   zeros(Nb_Epoch, 3);
 
 %% EPOCH LOOP
 for iEpoch = 1:Nb_Epoch
@@ -38,21 +39,21 @@ for iEpoch = 1:Nb_Epoch
     
     pvt = estimatePVT(trackedPRN, mC1(iEpoch, :), mEphem, epochTime);
     
-    % TODO: Call function to transform XYZ pos to LLH pos
-    
+    mPosLLH(iEpoch, :) = rad2deg(f_xyz_2_llh(pvt(1:3)));
+    a=0;
 end
 
 %% RESULT ANALYSIS
 figure;
-plot(1:Nb_Epoch, SatPos1(1, :));
+plot(1:Nb_Epoch, SatPos1(1, :)); % <<<<<<<< Provisional
 xlabel('Epoch'); ylabel('X coordinate');
 
 figure;
-plot(1:Nb_Epoch, SatPos1(2, :));
+plot(1:Nb_Epoch, SatPos1(2, :)); % <<<<<<<< Provisional
 xlabel('Epoch'); ylabel('Y coordinate');
 
 figure;
-plot(1:Nb_Epoch, SatPos1(3, :));
+plot(1:Nb_Epoch, SatPos1(3, :)); % <<<<<<<< Provisional
 xlabel('Epoch'); ylabel('Z coordinate');
 
 
