@@ -24,6 +24,8 @@ nEpoch_max = 760; % For all epochs -> length(ObsData.DATA)
 
 [ionoA, ionoB, mEphem] = ExtractData_N(NavData.HEADER, NavData.DATA);
 
+save("test", "mEpoch", "Nb_Epoch", "vNb_Sat", "Total_Nb_Sat", "mTracked", "mC1", "mL1", "mD1", "mS1", "ionoA", "ionoB", "mEphem");
+
 %% Data structures initialisation
 SatPos1     =   zeros(3, Nb_Epoch); % <<<<<<<< Provisional
 mPosLLH     =   zeros(Nb_Epoch, 3);
@@ -36,6 +38,8 @@ for iEpoch = 1:Nb_Epoch
     
     % Rx time in seconds of week
     epochTime   =   mEpoch(iEpoch, 2);
+    
+    trackedPRN  =   checkSatHealth(trackedPRN, mEphem, epochTime);
     
     pvt = estimatePVT(trackedPRN, mC1(iEpoch, :), mEphem, epochTime);
     

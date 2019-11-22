@@ -13,7 +13,7 @@ addpath(genpath('Library'));
 ephTime     =   14400;    %  [s]    Time of validity of ephemeris data
 
 %% FILE LOADING
-dataFileName = 'Data/Structs/givenData.mat';
+dataFileName = 'Data/Structs/static.mat';
 load(dataFileName);
 
 %% DATA EXTRACTION
@@ -24,9 +24,11 @@ nEpoch_max = 760; % For all epochs -> length(ObsData.DATA)
 
 [ionoA, ionoB, mEphem] = ExtractData_N(NavData.HEADER, NavData.DATA);
 
+save("test", 
+
 %% Data structures initialisation
 SatPos1     =   zeros(3, Nb_Epoch); % <<<<<<<< Provisional
-mPosLLH     =   zeros(NbEpoch, 3);
+mPosLLH     =   zeros(Nb_Epoch, 3);
 
 %% EPOCH LOOP
 for iEpoch = 1:Nb_Epoch
@@ -39,8 +41,8 @@ for iEpoch = 1:Nb_Epoch
     
     pvt = estimatePVT(trackedPRN, mC1(iEpoch, :), mEphem, epochTime);
     
-    mPosLLH(iEpoch, :) = xyz_2_lla_PVT(pvt(1:3));
-    
+    mPosLLH(iEpoch, :) = rad2deg(f_xyz_2_llh(pvt(1:3)));
+    a=0;
 end
 
 %% RESULT ANALYSIS
