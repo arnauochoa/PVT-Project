@@ -10,25 +10,31 @@ close all; clc; clearvars;
 addpath(genpath('Library'));
 
 %% CONSTANTS
-ephTime     =   14400;    %  [s]    Time of validity of ephemeris data
+
 
 %% FILE LOADING
-dataFileName = 'Data/Structs/static.mat';
+dataFileName = 'Data/Structs/givenData.mat';
 load(dataFileName);
 
 %% DATA EXTRACTION
 % Extraction of data into matrices
-nEpoch_max = 760; % For all epochs -> length(ObsData.DATA)
+nEpoch_max = length(ObsData.DATA); % For all epochs -> length(ObsData.DATA)
 [mEpoch, Nb_Epoch, vNb_Sat, Total_Nb_Sat, mTracked, mC1, mL1, mD1, mS1] = ...
     ExtractData_O(ObsData.DATA, nEpoch_max);
 
 [ionoA, ionoB, mEphem] = ExtractData_N(NavData.HEADER, NavData.DATA);
 
-save("test", "mEpoch", "Nb_Epoch", "vNb_Sat", "Total_Nb_Sat", "mTracked", "mC1", "mL1", "mD1", "mS1", "ionoA", "ionoB", "mEphem");
+
 
 %% Data structures initialisation
-SatPos1     =   zeros(3, Nb_Epoch); % <<<<<<<< Provisional
 mPosLLH     =   zeros(Nb_Epoch, 3);
+pvt         =   [...  % Initial guess
+                ObsData.HEADER.ANTENNA.POSITION.x_ECEF ...
+                ObsData.HEADER.ANTENNA.POSITION.x_ECEF ...
+                ObsData.HEADER.ANTENNA.POSITION.x_ECEF ...
+                0];          
+ionoCorr    =   zeros(Nb_Epoch, 32);
+tropoCorr   =   zeros(Nb_Epoch, 32);
 
 %% EPOCH LOOP
 for iEpoch = 1:Nb_Epoch
@@ -41,24 +47,15 @@ for iEpoch = 1:Nb_Epoch
     
     trackedPRN  =   checkSatHealth(trackedPRN, mEphem, epochTime);
     
-    pvt = estimatePVT(trackedPRN, mC1(iEpoch, :), mEphem, epochTime);
+    [pvt, ionoCorr(iEpoch, :), tropoCorr(iEpoch, :)] =   estimatePVT(...
+        trackedPRN, mC1(iEpoch, :), mEphem, epochTime, pvt, ionoA, ionoB);
     
     mPosLLH(iEpoch, :) = rad2deg(f_xyz_2_llh(pvt(1:3)));
     a=0;
 end
 
 %% RESULT ANALYSIS
-figure;
-plot(1:Nb_Epoch, SatPos1(1, :)); % <<<<<<<< Provisional
-xlabel('Epoch'); ylabel('X coordinate');
-
-figure;
-plot(1:Nb_Epoch, SatPos1(2, :)); % <<<<<<<< Provisional
-xlabel('Epoch'); ylabel('Y coordinate');
-
-figure;
-plot(1:Nb_Epoch, SatPos1(3, :)); % <<<<<<<< Provisional
-xlabel('Epoch'); ylabel('Z coordinate');
-
+plot(mPosLLH(:, 2), mPosLLH(:, 1), 'o');
+xlabel("Longitude"); ylabel("Latitude");
 
 

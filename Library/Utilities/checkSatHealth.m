@@ -12,17 +12,13 @@ function [healthyPRN]  =   checkSatHealth(trackedPRN, mEphem, epochTime)
 % Output:
 %           healthyPRN: Vector containing the numbers of the tracked satellites
 % ---------------------------------------------------------------------------------------
-
     healthyPRN  =   [];
     iSat        =   1;
-    
     for svPRN = trackedPRN
         satEphem    =   SelectEphemeris(mEphem, svPRN, epochTime);
-        
         if satEphem(2) == 0
             healthyPRN(iSat) = svPRN;  %#ok<AGROW>
             iSat = iSat + 1;
         end
     end
-    
 end

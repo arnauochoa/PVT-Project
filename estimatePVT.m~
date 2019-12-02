@@ -1,4 +1,4 @@
-function [pvt, ionoCorr, tropoCorr] = estimatePVT(trackedPRN, pr, mEphem, epochTime, pvt0, ionoA, ionoB)
+function [pvt] = estimatePVT(trackedPRN, pr, mEphem, epochTime, pvt0, ionoA, ionoB)
 % ---------------------------------------------------------------------------------------
 % This function estimates the position and time bias of the user at a given
 % epoch using the standard LS estimation method.
@@ -14,8 +14,6 @@ function [pvt, ionoCorr, tropoCorr] = estimatePVT(trackedPRN, pr, mEphem, epochT
 %
 % Output:
 %           pvt:        Vector with X-Y-Z coordinates and time bias.
-%           ionoCorr:   Vector with ionospheric corrections for all tracked satellites
-%           tropoCorr:  Vector with tropospheric corrections for all tracked satellites
 % ---------------------------------------------------------------------------------------
 
     nTrackedSat     =   length(trackedPRN);
@@ -26,14 +24,9 @@ function [pvt, ionoCorr, tropoCorr] = estimatePVT(trackedPRN, pr, mEphem, epochT
     pvt             =   pvt0;
     
     hasConverged    =   0;
-    convThreshold   =   0.01;
-    iter            =   1;
-    maxIter         =   20;
+    convThreshold   =   [0.01 0.01 0.01];
     
-    ionoCorr        =   zeros(1, 32);
-    tropoCorr       =   zeros(1, 32);
-    
-    while ~hasConverged && iter <= maxIter
+    while ~hasConverged
         for iSat = 1:nTrackedSat
             svPRN   =   trackedPRN(iSat);
             if(iter == 1)
@@ -46,11 +39,9 @@ function [pvt, ionoCorr, tropoCorr] = estimatePVT(trackedPRN, pr, mEphem, epochT
             end
             
             % TODO: Apply corrections
-            [ionoCorr(svPRN), tropoCorr(svPRN)]   =   getPropCorr(...
-                mSatPos(iSat, :), pvt, ionoA, ionoB, epochTime);
-            corr    =   ionoCorr(svPRN) + tropoCorr(svPRN);
-            
-            prCorr  =   pr(svPRN) - corr;
+%             corr    =   getPropCorr(mSatPos(iSat, :), pvt, ionoA, ionoB, epochTime);
+            corr=0;
+            prCorr  =   pr(svPRN) + corr;
             
             % Fill geometry matrix H and measurements vector p
             d0      =   sqrt(   (mSatPos(iSat, 1) - pvt(1))^2 + ...
@@ -70,8 +61,6 @@ function [pvt, ionoCorr, tropoCorr] = estimatePVT(trackedPRN, pr, mEphem, epochT
         pvt(1:3)    =   pvt(1:3) + d(1:3).';
         pvt(4)      =   d(4);
         
-        % Check if values d(1:3) are lower than the convergence threshold
-        hasConverged =  prod(d(1:3) < convThreshold); 
-        iter        =   iter+1;
+        if d(1:3) < convThreshold, hasConverged = 1 end;
     end
 end

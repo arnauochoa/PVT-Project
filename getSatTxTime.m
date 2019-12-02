@@ -46,6 +46,6 @@ function [txTime] = getSatTxTime(satEphem, epochTime, pr)
     
     dtRel   =   F * ecc * sqrtA * sin(eK);
     
-    txTime  =   txTime;% - dtRel;
+    txTime  =   txTime - dtRel;
 end
 
