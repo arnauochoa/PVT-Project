@@ -1,7 +1,7 @@
 function [vEphemeris] = SelectEphemeris(Ephem,iPRN,iUser_NoS)
 
 %--------------------------------------------------------------------------
-% Copyright © ENAC, 2015.
+% Copyright ï¿½ ENAC, 2015.
 % ENAC : http://www.enac.fr/.
 % signav@recherche.enac.fr
 %
@@ -21,7 +21,7 @@ vEphemeris = [];
 % Search of recorded ephemeris data corresponding to SV iPRN
 PRN_EphemList = []; PRN_EphemList = find(Ephem(:,1)==iPRN);
 if isempty(PRN_EphemList)
-    printf('\nNo navigation data recorded for PRN %d.\n',iPRN);
+    fprintf('\nNo navigation data recorded for PRN %d.\n',iPRN);
     return,
 else
     % Select the best fitting ephemeris: ephemeris with TOE that is

@@ -1,4 +1,4 @@
-function [ionoCorr]    =   findIonoCorr(posLatLng, el, az, epochTime, ionoA, ionoB)
+function [ionoCorr]    =   findIonoDelay(posLatLng, el, az, epochTime, ionoA, ionoB)
 % ---------------------------------------------------------------------------------------
 % This function estimates the propagation delay due to the ionosphere by
 % using the Klobuchar model.
@@ -12,9 +12,11 @@ function [ionoCorr]    =   findIonoCorr(posLatLng, el, az, epochTime, ionoA, ion
 %           ionoB:      Iono correction b-parameters (Iono_b = [b0,b1,b2,b3])
 %
 % Output:
-%           ionoCorr:   Ionospheric correction
+%           ionoCorr:   Ionospheric delay [s]
 % ---------------------------------------------------------------------------------------
     
+%% PAY ATTENTION TO ANGLE UNITY --> SEMI CIRCLES
+
     %% Constants
     rE      =   6.378e6;        %   [m]     Radius of earth
     hIono   =   3.5e5;          %   [m]     Height of ionospheric layer

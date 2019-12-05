@@ -1,4 +1,4 @@
-function [ionoCorr, tropoCorr]    =   getPropCorr(satPos, pvt, ionoA, ionoB, epochTime)
+function [ionoCorr, tropoCorr, el, az]    =   getPropCorr(satPos, pvt, ionoA, ionoB, epochTime)
 % ---------------------------------------------------------------------------------------
 % This function estimates the position and time bias of the user at a given
 % epoch using the standard LS estimation method.
@@ -11,8 +11,12 @@ function [ionoCorr, tropoCorr]    =   getPropCorr(satPos, pvt, ionoA, ionoB, epo
 %           epochTime:  Corrected time of the current epoch as SoW
 %
 % Output:
-%           corr:       sum of propagation corrections (i.e. iono + tropo)
+%           ionoCorr:   Ionospheric correction
+%           tropoCorr:  Tropospheric correction
+%           el:         Satellite's elevation
+%           az:         Satellite's azimuth
 % ---------------------------------------------------------------------------------------
+    c           =   299792458;       %   Speed of light (m/s)
 
     pos         =   pvt(1:3);
     
@@ -20,9 +24,9 @@ function [ionoCorr, tropoCorr]    =   getPropCorr(satPos, pvt, ionoA, ionoB, epo
     
     posLLH      =   xyz_2_lla_PVT(pvt(1:3));
     
-%     tropoCorr   =   findTropoCorr(el, posLLH(3));
+%     tropoCorr   =   findTropoCorr(el, posLLH(3));  UNB3M
 
-    ionoCorr    =   findIonoCorr(posLLH(1:2), el, az, epochTime, ionoA, ionoB);
+    ionoCorr    =   c * findIonoDelay(posLLH(1:2), el, az, epochTime, ionoA, ionoB);
 
     tropoCorr = 0;
 end

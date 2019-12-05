@@ -10,7 +10,7 @@ close all; clc; clearvars;
 addpath(genpath('Library'));
 
 %% CONSTANTS
-
+refLatLng      =    [43.56475, 1.48171]; % givenData: 43.56475, 1.48171, static: 43.563450, 1.484558
 
 %% FILE LOADING
 dataFileName = 'Data/Structs/givenData.mat';
@@ -23,8 +23,6 @@ nEpoch_max = length(ObsData.DATA); % For all epochs -> length(ObsData.DATA)
     ExtractData_O(ObsData.DATA, nEpoch_max);
 
 [ionoA, ionoB, mEphem] = ExtractData_N(NavData.HEADER, NavData.DATA);
-
-
 
 %% Data structures initialisation
 mPosLLH     =   zeros(Nb_Epoch, 3);
@@ -55,7 +53,12 @@ for iEpoch = 1:Nb_Epoch
 end
 
 %% RESULT ANALYSIS
-plot(mPosLLH(:, 2), mPosLLH(:, 1), 'o');
-xlabel("Longitude"); ylabel("Latitude");
+figure;
+grid on,
+plot(mPosLLH(:, 2), mPosLLH(:, 1), 'x', 'MarkerSize',9); hold on;
+plot(refLatLng(2), refLatLng(1), 'x', 'Color', 'r', 'MarkerSize',9);
+xlabel('Longitude [deg]'); ylabel('Latitude [deg]');
+legend('estimated', 'reference', 'Location','best')
+
 
 

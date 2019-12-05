@@ -18,50 +18,58 @@ function [pvt, ionoCorr, tropoCorr] = estimatePVT(trackedPRN, pr, mEphem, epochT
 %           tropoCorr:  Vector with tropospheric corrections for all tracked satellites
 % ---------------------------------------------------------------------------------------
 
+    %% CONSTANTS
+    c       =   299792458;       %   Speed of light (m/s)
+
+    %% INITIALISATION OF VARIABLES
     nTrackedSat     =   length(trackedPRN);
-    mSatPos         =   nan(nTrackedSat, 3);
     
     mH              =   zeros(nTrackedSat, 4);
     p               =   zeros(nTrackedSat, 1);
+    prCorr          =   zeros(nTrackedSat, 1);
     pvt             =   pvt0;
     
     hasConverged    =   0;
-    convThreshold   =   0.01;
+    convThreshold   =   0.0001;
     iter            =   1;
-    maxIter         =   20;
+    maxIter         =   10;
     
-    ionoCorr        =   zeros(1, 32);
-    tropoCorr       =   zeros(1, 32);
+    tCorr           =   zeros(32, 1);
+    ionoCorr        =   zeros(32, 1);
+    tropoCorr       =   zeros(32, 1);
+    mSatPos         =   nan(32, 3);
+    mElAz           =   zeros(32, 2);
     
+    %% ITERATIVE LS ESTIMATION
     while ~hasConverged && iter <= maxIter
         for iSat = 1:nTrackedSat
             svPRN   =   trackedPRN(iSat);
             if(iter == 1)
                 % Find the valid ephemeris at the current epoch for the current
                 % satellite
-                satEphem            =   SelectEphemeris(mEphem, svPRN, epochTime);
+                satEphem                =   SelectEphemeris(mEphem, svPRN, epochTime);
                 
-                txTime              =   getSatTxTime(satEphem, epochTime, pr(svPRN));
-                mSatPos(iSat, :)    =   getSatPos(satEphem, txTime, epochTime);
+                [txTime, tCorr(svPRN)]  =   getSatTxTime(satEphem, epochTime, pr(svPRN));
+                mSatPos(svPRN, :)       =   getSatPos(satEphem, txTime, epochTime);
             end
             
-            % TODO: Apply corrections
-            [ionoCorr(svPRN), tropoCorr(svPRN)]   =   getPropCorr(...
-                mSatPos(iSat, :), pvt, ionoA, ionoB, epochTime);
-            corr    =   ionoCorr(svPRN) + tropoCorr(svPRN);
+            % Apply corrections
+            [ionoCorr(svPRN), tropoCorr(svPRN), mElAz(svPRN, 1), mElAz(svPRN, 2)] = ...
+                getPropCorr(mSatPos(svPRN, :), pvt, ionoA, ionoB, epochTime);
+            corr    =   ionoCorr(svPRN) + tropoCorr(svPRN) - c*tCorr(svPRN);
             
-            prCorr  =   pr(svPRN) - corr;
+            prCorr(iSat)  =   pr(svPRN) - corr;
             
             % Fill geometry matrix H and measurements vector p
-            d0      =   sqrt(   (mSatPos(iSat, 1) - pvt(1))^2 + ...
-                                (mSatPos(iSat, 2) - pvt(2))^2 + ...
-                                (mSatPos(iSat, 3) - pvt(3))^2 );
+            d0      =   sqrt(   (mSatPos(svPRN, 1) - pvt(1))^2 + ...
+                                (mSatPos(svPRN, 2) - pvt(2))^2 + ...
+                                (mSatPos(svPRN, 3) - pvt(3))^2 );
 
-            p(iSat) =   prCorr - d0;
+            p(iSat) =   prCorr(iSat) - d0;
             
-            ax      =   -(mSatPos(iSat, 1) - pvt(1)) / d0;
-            ay      =   -(mSatPos(iSat, 2) - pvt(2)) / d0;
-            az      =   -(mSatPos(iSat, 3) - pvt(3)) / d0;
+            ax      =   -(mSatPos(svPRN, 1) - pvt(1)) / d0;
+            ay      =   -(mSatPos(svPRN, 2) - pvt(2)) / d0;
+            az      =   -(mSatPos(svPRN, 3) - pvt(3)) / d0;
             
             mH(iSat, :) = [ax ay az 1];
         end
@@ -71,7 +79,8 @@ function [pvt, ionoCorr, tropoCorr] = estimatePVT(trackedPRN, pr, mEphem, epochT
         pvt(4)      =   d(4);
         
         % Check if values d(1:3) are lower than the convergence threshold
-        hasConverged =  prod(d(1:3) < convThreshold); 
+        hasConverged =  abs(prod(d(1:3))) < convThreshold; 
         iter        =   iter+1;
+
     end
 end
