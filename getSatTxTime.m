@@ -1,4 +1,4 @@
-function [txTime] = getSatTxTime(satEphem, epochTime, pr)
+function [txTime, tCorr] = getSatTxTime(satEphem, epochTime, pr)
 % ---------------------------------------------------------------------------------------
 % This function estimates the transmission time of a satellite at a given epoch.
 % 
@@ -9,6 +9,7 @@ function [txTime] = getSatTxTime(satEphem, epochTime, pr)
 %
 % Output:
 %           satTime:    Corrected time of the satellite.
+%           tCorr:      Time bias correction for given satellite
 % ---------------------------------------------------------------------------------------
 
     % Constants
@@ -36,16 +37,17 @@ function [txTime] = getSatTxTime(satEphem, epochTime, pr)
     
     txTime  =   tRaw - dt; 
     
-    tK  =   txTime - t0e;
-    tK  =   checkTime(tK);
+    tK      =   txTime - t0e;
+    tK      =   checkTime(tK);
 
-    mK  =   m0 + (sqrt(mu)/sqrtA^3 + deltaN) * tK;
-    mK  =   rem(mK + 2*pi, 2*pi);
+    mK      =   m0 + (sqrt(mu)/sqrtA^3 + deltaN) * tK;
+    mK      =   rem(mK + 2*pi, 2*pi);
     
-    eK  =   findEccAnomaly(mK, ecc);
+    eK      =   findEccAnomaly(mK, ecc);
     
     dtRel   =   F * ecc * sqrtA * sin(eK);
     
-    txTime  =   txTime;% - dtRel;
+    txTime  =   txTime - dtRel;
+    tCorr   =   dt + dtRel;
 end
 
