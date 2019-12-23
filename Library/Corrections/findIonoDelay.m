@@ -1,4 +1,4 @@
-function [ionoCorr]    =   findIonoDelay(posLatLng, el, az, epochTime, ionoA, ionoB)
+function [ionoDelay]    =   findIonoDelay(posLatLng, el, az, epochTime, ionoA, ionoB)
 % ---------------------------------------------------------------------------------------
 % This function estimates the propagation delay due to the ionosphere by
 % using the Klobuchar model.
@@ -14,8 +14,6 @@ function [ionoCorr]    =   findIonoDelay(posLatLng, el, az, epochTime, ionoA, io
 % Output:
 %           ionoCorr:   Ionospheric delay [s]
 % ---------------------------------------------------------------------------------------
-    
-%% PAY ATTENTION TO ANGLE UNITY --> SEMI CIRCLES
 
     %% Constants
     rE      =   6.378e6;        %   [m]     Radius of earth
@@ -27,6 +25,7 @@ function [ionoCorr]    =   findIonoDelay(posLatLng, el, az, epochTime, ionoA, io
     %% Klobuchar model
     el      = abs(el);
     
+    % Conversion to semi-circles
     lat     =   posLatLng(1) / pi;
     lng     =   posLatLng(2) / pi;
     az      =   az / pi;
@@ -41,9 +40,9 @@ function [ionoCorr]    =   findIonoDelay(posLatLng, el, az, epochTime, ionoA, io
     % Geomagnetic latitude of IPP
     latGM   =   asin(sin(latIPP)*sin(latP) + cos(latIPP)*cos(latP)*cos(lngIPP-lngP));
     % Local time at IPP
-    tIPP    =   daySec/2 * lngIPP/pi + epochTime;
-    if      tIPP  >=    daySec,     tIPP = tIPP - daySec;
-    elseif  tIPP  <     0,          tIPP = tIPP + daySec;      end
+    tIPP    =   (daySec/2) * lngIPP/pi + epochTime;
+    while   tIPP  >=    daySec,     tIPP = tIPP - daySec;   end
+    while   tIPP  <     0,          tIPP = tIPP + daySec;   end
     % Amplitude of ionospheric delay
     aux     =   [1, (latGM/pi), (latGM/pi)^2, (latGM/pi)^3];
     aI      =   sum(ionoA .* aux);
@@ -57,10 +56,9 @@ function [ionoCorr]    =   findIonoDelay(posLatLng, el, az, epochTime, ionoA, io
     f       =   (1 - (rE/(rE+hIono) * cos(el))^2)^(-1/2);
     
     % Ionospheric delay
-    if xI < pi/2
-        ionoCorr    =   (5e-9 + aI * cos(xI)) * f;
+    if abs(xI) < pi/2
+        ionoDelay   =   (5e-9 + aI * cos(xI)) * f;
     else
-        ionoCorr    =   5e-9 * f;
+        ionoDelay   =   5e-9 * f;
     end
-    
 end

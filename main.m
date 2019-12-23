@@ -10,32 +10,39 @@ close all; clc; clearvars;
 addpath(genpath('Library'));
 
 %% CONSTANTS
-refLatLng      =    [43.56475, 1.48171]; % givenData: 43.56475, 1.48171, static: 43.563450, 1.484558
+% refPosLLH = [43.563450, 1.484557, 150]; % For measurements at football field
 
 %% FILE LOADING
-dataFileName = 'Data/Structs/givenData.mat';
+dataFileName = 'Data/Structs/static.mat';
 load(dataFileName);
 
 %% DATA EXTRACTION
 % Extraction of data into matrices
 nEpoch_max = length(ObsData.DATA); % For all epochs -> length(ObsData.DATA)
-[mEpoch, Nb_Epoch, vNb_Sat, Total_Nb_Sat, mTracked, mC1, mL1, mD1, mS1] = ...
+[mEpoch, nEpoch, vNumSat, totalNumSat, mTracked, mC1, mL1, mD1, mS1] = ...
     ExtractData_O(ObsData.DATA, nEpoch_max);
 
 [ionoA, ionoB, mEphem] = ExtractData_N(NavData.HEADER, NavData.DATA);
 
+RefPos      =   ObsData.HEADER.ANTENNA.POSITION;
+refPosXYZ   =   [RefPos.x_ECEF, RefPos.y_ECEF, RefPos.z_ECEF];
+refPosLLH   =   rad2deg(f_xyz_2_llh(refPosXYZ)); 
+refPosNEU   =   delta_wgs84_2_local(refPosXYZ.', refPosXYZ.').';
+
 %% Data structures initialisation
-mPosLLH     =   zeros(Nb_Epoch, 3);
+mPosXYZ     =   zeros(nEpoch, 3);
+mPosLLH     =   zeros(nEpoch, 3);
+tBias       =   zeros(nEpoch, 1);
 pvt         =   [...  % Initial guess
                 ObsData.HEADER.ANTENNA.POSITION.x_ECEF ...
                 ObsData.HEADER.ANTENNA.POSITION.x_ECEF ...
                 ObsData.HEADER.ANTENNA.POSITION.x_ECEF ...
                 0];          
-ionoCorr    =   zeros(Nb_Epoch, 32);
-tropoCorr   =   zeros(Nb_Epoch, 32);
+ionoCorr    =   zeros(nEpoch, 32);
+tropoCorr   =   zeros(nEpoch, 32);
 
 %% EPOCH LOOP
-for iEpoch = 1:Nb_Epoch
+for iEpoch = 1:nEpoch
     
     % Find the PRNs of the tracked satellites at current epoch
     trackedPRN  =   find(mTracked(iEpoch, :)); 
@@ -48,17 +55,42 @@ for iEpoch = 1:Nb_Epoch
     [pvt, ionoCorr(iEpoch, :), tropoCorr(iEpoch, :)] =   estimatePVT(...
         trackedPRN, mC1(iEpoch, :), mEphem, epochTime, pvt, ionoA, ionoB);
     
-    mPosLLH(iEpoch, :) = rad2deg(f_xyz_2_llh(pvt(1:3)));
+    mPosXYZ(iEpoch, :) = pvt(1:3);
+    mPosLLH(iEpoch, :) = rad2deg(f_xyz_2_llh(mPosXYZ(iEpoch, :)));
+    tBias(iEpoch) = pvt(4);
     a=0;
 end
+
+%% COORDINATES CONVERSION
+mPosNEU = delta_wgs84_2_local(mPosXYZ.', refPosXYZ.').';
+
+%% PREFORMANCE METRICS
+neuError = mPosNEU - refPosNEU;
 
 %% RESULT ANALYSIS
 figure;
 grid on,
-plot(mPosLLH(:, 2), mPosLLH(:, 1), 'x', 'MarkerSize',9); hold on;
-plot(refLatLng(2), refLatLng(1), 'x', 'Color', 'r', 'MarkerSize',9);
-xlabel('Longitude [deg]'); ylabel('Latitude [deg]');
-legend('estimated', 'reference', 'Location','best')
+plot(neuError(:, 2), neuError(:, 1), 'x', 'MarkerSize',9); hold on;
+plot(0, 0, 'x', 'Color', 'r', 'MarkerSize',9);
+xlabel('Longitude [m]'); ylabel('Latitude [m]');
+legend('estimated', 'reference', 'Location','best');
+
+figure;
+ecdf(abs(neuError(:, 1))); hold on;
+ecdf(abs(neuError(:, 2)));
+title('CDF of error in Latitude and Longitude');
+legend('Latitude', 'Longitude');
+xlabel('Coordinate error (m)');
+
+figure;
+ecdf(abs(neuError(:, 3))); hold on;
+title('CDF of error in Height');
+xlabel('Height error (m)');
+
+figure;
+plot(mPosLLH(:,2), mPosLLH(:,1), '.b','MarkerSize',15); hold on;
+plot(refPosLLH(2), refPosLLH(1), '.r','MarkerSize',15);
+plot_google_map;
 
 
 
