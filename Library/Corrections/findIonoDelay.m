@@ -1,13 +1,13 @@
-function [ionoDelay]    =   findIonoDelay(posLatLng, el, az, epochTime, ionoA, ionoB)
+function [delay]    =   findIonoDelay(posLatLng, el, az, epochTime, ionoA, ionoB)
 % ---------------------------------------------------------------------------------------
 % This function estimates the propagation delay due to the ionosphere by
 % using the Klobuchar model.
 % 
 % Input:  
-%           posLatLng:  Position of the user in Latitude, Longitude.
-%           el:        	Elevation of the satellite.
-%           az:         Azimuth of the satellite.
-%           epochTime:  Time of the current epoch.
+%           posLatLng:  Position of the user in Latitude, Longitude. [rad]
+%           el:        	Elevation of the satellite. [rad]
+%           az:         Azimuth of the satellite. [rad]
+%           epochTime:  Time of the current epoch. [SoW]
 %           ionoA:      Iono correction a-parameters (Iono_a = [a0,a1,a2,a3]) 
 %           ionoB:      Iono correction b-parameters (Iono_b = [b0,b1,b2,b3])
 %
@@ -15,50 +15,56 @@ function [ionoDelay]    =   findIonoDelay(posLatLng, el, az, epochTime, ionoA, i
 %           ionoCorr:   Ionospheric delay [s]
 % ---------------------------------------------------------------------------------------
 
-    %% Constants
-    rE      =   6.378e6;        %   [m]     Radius of earth
-    hIono   =   3.5e5;          %   [m]     Height of ionospheric layer
-    latP    =   deg2rad(78.3);  %   [rad]   Latitude of geomagnetic pole
-    lngP    =   deg2rad(291);   %   [rad]   Latitude of geomagnetic pole
-    daySec  =   86400;          %   [sec]   Second per day
-
-    %% Klobuchar model
-    el      = abs(el);
+    c       =   299792458;
+    %initialization
+	delay   =   zeros(size(el));
     
-    % Conversion to semi-circles
-    lat     =   posLatLng(1) / pi;
-    lng     =   posLatLng(2) / pi;
-    az      =   az / pi;
-    el      =   el / pi;
+    %ionospheric parameters
+	a0      =   ionoA(1);
+	a1      =   ionoA(2);
+	a2      =   ionoA(3);
+	a3      =   ionoA(4);
+	b0      =   ionoB(1);
+	b1      =   ionoB(2);
+	b2      =   ionoB(3);
+	b3      =   ionoB(4);
     
-    % Earth-centered angle
-    psi     =   pi/2 - el - asin(rE/(rE+hIono) * cos(el));
-    % Latitude of Ionospheric Pierce Point
-    latIPP  =   asin(sin(lat)*cos(psi) + cos(lat)*sin(psi)*cos(az));
-    % Longitude of Ionospheric Pierce Point
-    lngIPP  =   lng + (psi * sin(az))/cos(latIPP);
-    % Geomagnetic latitude of IPP
-    latGM   =   asin(sin(latIPP)*sin(latP) + cos(latIPP)*cos(latP)*cos(lngIPP-lngP));
-    % Local time at IPP
-    tIPP    =   (daySec/2) * lngIPP/pi + epochTime;
-    while   tIPP  >=    daySec,     tIPP = tIPP - daySec;   end
-    while   tIPP  <     0,          tIPP = tIPP + daySec;   end
-    % Amplitude of ionospheric delay
-    aux     =   [1, (latGM/pi), (latGM/pi)^2, (latGM/pi)^3];
-    aI      =   sum(ionoA .* aux);
-    if aI < 0, aI = 0; end
-    % Period of ionospheric delay
-    pI      =   sum(ionoB .* aux);
-    if pI < 72000, pI = 72000; end
-    % Phase of ionospheric delay
-    xI      =   2*pi*(tIPP - 50400)/pI;
-    % Slant factor
-    f       =   (1 - (rE/(rE+hIono) * cos(el))^2)^(-1/2);
-    
-    % Ionospheric delay
-    if abs(xI) < pi/2
-        ionoDelay   =   (5e-9 + aI * cos(xI)) * f;
-    else
-        ionoDelay   =   5e-9 * f;
-    end
+    %elevation from 0 to 90 degrees
+	el      =   abs(el);
+	
+	%conversion to semicircles
+	lat     =   posLatLng(1) / 180;
+	lon     =   posLatLng(2) / 180;
+	az      =   az / 180;
+	el      =   el / 180;
+	
+	f   =   1 + 16*(0.53-el).^3;
+	
+	psi =   (0.0137 ./ (el+0.11)) - 0.022;
+	
+	phi =   lat + psi .* cos(az*pi);
+	phi(phi > 0.416)  =  0.416;
+	phi(phi < -0.416) = -0.416;
+	
+	lambda = lon + ((psi.*sin(az*pi)) ./ cos(phi*pi));
+	
+	ro = phi + 0.064*cos((lambda-1.617)*pi);
+	
+	t = lambda*43200 + epochTime;
+	t = mod(t,86400);
+	
+	a = a0 + a1*ro + a2*ro.^2 + a3*ro.^3;
+	a(a < 0) = 0;
+	
+	p = b0 + b1*ro + b2*ro.^2 + b3*ro.^3;
+	p(p < 72000) = 72000;
+	
+	x = (2*pi*(t-50400)) ./ p;
+	
+	%ionospheric delay
+	index = find(abs(x) < 1.57);
+	delay(index,1) = c * f(index) .* (5e-9 + a(index) .* (1 - (x(index).^2)/2 + (x(index).^4)/24));
+	
+	index = find(abs(x) >= 1.57);
+	delay(index,1) = c * f(index) .* 5e-9;
 end

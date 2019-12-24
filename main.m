@@ -13,7 +13,7 @@ addpath(genpath('Library'));
 % refPosLLH = [43.563450, 1.484557, 150]; % For measurements at football field
 
 %% FILE LOADING
-dataFileName = 'Data/Structs/static.mat';
+dataFileName = 'Data/Structs/givenData.mat';
 load(dataFileName);
 
 %% DATA EXTRACTION
@@ -38,8 +38,8 @@ pvt         =   [...  % Initial guess
                 ObsData.HEADER.ANTENNA.POSITION.x_ECEF ...
                 ObsData.HEADER.ANTENNA.POSITION.x_ECEF ...
                 0];          
-ionoCorr    =   zeros(nEpoch, 32);
-tropoCorr   =   zeros(nEpoch, 32);
+ionoCorr    =   zeros(32, nEpoch);
+tropoCorr   =   zeros(32, nEpoch);
 
 %% EPOCH LOOP
 for iEpoch = 1:nEpoch
@@ -52,7 +52,7 @@ for iEpoch = 1:nEpoch
     
     trackedPRN  =   checkSatHealth(trackedPRN, mEphem, epochTime);
     
-    [pvt, ionoCorr(iEpoch, :), tropoCorr(iEpoch, :)] =   estimatePVT(...
+    [pvt, ionoCorr(:, iEpoch), tropoCorr(:, iEpoch)] =   estimatePVT(...
         trackedPRN, mC1(iEpoch, :), mEphem, epochTime, pvt, ionoA, ionoB);
     
     mPosXYZ(iEpoch, :) = pvt(1:3);

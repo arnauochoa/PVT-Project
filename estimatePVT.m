@@ -81,6 +81,7 @@ function [pvt, ionoCorr, tropoCorr] = estimatePVT(trackedPRN, pr, mEphem, epochT
         % Check if values d(1:3) are lower than the convergence threshold
         hasConverged =  abs(prod(d(1:3))) < convThreshold; 
         iter        =   iter+1;
-
+    
+%         a = ionoCorr(find(ionoCorr))
     end
 end

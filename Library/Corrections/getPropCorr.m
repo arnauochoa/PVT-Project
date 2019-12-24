@@ -16,8 +16,6 @@ function [ionoCorr, tropoCorr, el, az]    =   getPropCorr(satPos, pvt, ionoA, io
 %           el:         Satellite's elevation
 %           az:         Satellite's azimuth
 % ---------------------------------------------------------------------------------------
-    c           =   299792458;       %   Speed of light (m/s)
-
     pos         =   pvt(1:3);
     
     [el, az]    =   elevation_azimuth(pos, satPos);
@@ -26,7 +24,7 @@ function [ionoCorr, tropoCorr, el, az]    =   getPropCorr(satPos, pvt, ionoA, io
     
 %     tropoCorr   =   findTropoCorr(el, posLLH(3));  UNB3M
 
-    ionoCorr    =   c * findIonoDelay(posLLH(1:2), el, az, epochTime, ionoA, ionoB);
+    ionoCorr    =   findIonoDelay(rad2deg(posLLH(1:2)), rad2deg(el), rad2deg(az), epochTime, ionoA, ionoB);
 
     tropoCorr = 0;
 end
