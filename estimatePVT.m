@@ -1,4 +1,5 @@
-function [pvt, ionoCorr, tropoCorr] = estimatePVT(trackedPRN, pr, mEphem, epochTime, pvt0, ionoA, ionoB)
+function [pvt, ionoCorr, tropoCorr] = ...
+    estimatePVT(trackedPRN, pr, mEphem, epochTime, epochDoY, pvt0, ionoA, ionoB)
 % ---------------------------------------------------------------------------------------
 % This function estimates the position and time bias of the user at a given
 % epoch using the standard LS estimation method.
@@ -8,6 +9,7 @@ function [pvt, ionoCorr, tropoCorr] = estimatePVT(trackedPRN, pr, mEphem, epochT
 %           pr:         vector containing the pseudorange of the satellites (32 x 1)
 %           mEphem:     Matrix containing the ephemeris information (numSat x 29)
 %           epochTime:  Corrected time of the current epoch as SoW
+%           epochDoY:   Day of Year of current epoch
 %           pvt0:       Initial guess of pvt.
 %           ionoA:      Iono correction a-parameters (Iono_a = [a0,a1,a2,a3]) 
 %           ionoB:      Iono correction b-parameters (Iono_b = [b0,b1,b2,b3])
@@ -55,7 +57,7 @@ function [pvt, ionoCorr, tropoCorr] = estimatePVT(trackedPRN, pr, mEphem, epochT
             
             % Apply corrections
             [ionoCorr(svPRN), tropoCorr(svPRN), mElAz(svPRN, 1), mElAz(svPRN, 2)] = ...
-                getPropCorr(mSatPos(svPRN, :), pvt, ionoA, ionoB, epochTime);
+                getPropCorr(mSatPos(svPRN, :), pvt, ionoA, ionoB, epochTime, epochDoY);
             corr    =   ionoCorr(svPRN) + tropoCorr(svPRN) - c*tCorr(svPRN);
             
             prCorr(iSat)  =   pr(svPRN) - corr;

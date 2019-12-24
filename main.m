@@ -49,11 +49,12 @@ for iEpoch = 1:nEpoch
     
     % Rx time in seconds of week
     epochTime   =   mEpoch(iEpoch, 2);
+    epochDoY    =   ymd2doy(mEpoch(iEpoch, 4:9).');
     
     trackedPRN  =   checkSatHealth(trackedPRN, mEphem, epochTime);
     
     [pvt, ionoCorr(:, iEpoch), tropoCorr(:, iEpoch)] =   estimatePVT(...
-        trackedPRN, mC1(iEpoch, :), mEphem, epochTime, pvt, ionoA, ionoB);
+        trackedPRN, mC1(iEpoch, :), mEphem, epochTime, epochDoY, pvt, ionoA, ionoB);
     
     mPosXYZ(iEpoch, :) = pvt(1:3);
     mPosLLH(iEpoch, :) = rad2deg(f_xyz_2_llh(mPosXYZ(iEpoch, :)));
