@@ -1,4 +1,4 @@
-function [pvt, ionoCorr, tropoCorr] = ...
+function [pvt, ionoCorr, tropCorr] = ...
     estimatePVT(trackedPRN, pr, mEphem, epochTime, epochDoY, pvt0, ionoA, ionoB)
 % ---------------------------------------------------------------------------------------
 % This function estimates the position and time bias of the user at a given
@@ -38,7 +38,7 @@ function [pvt, ionoCorr, tropoCorr] = ...
     
     tCorr           =   zeros(32, 1);
     ionoCorr        =   zeros(32, 1);
-    tropoCorr       =   zeros(32, 1);
+    tropCorr       =   zeros(32, 1);
     mSatPos         =   nan(32, 3);
     mElAz           =   zeros(32, 2);
     
@@ -56,9 +56,9 @@ function [pvt, ionoCorr, tropoCorr] = ...
             end
             
             % Apply corrections
-            [ionoCorr(svPRN), tropoCorr(svPRN), mElAz(svPRN, 1), mElAz(svPRN, 2)] = ...
+            [ionoCorr(svPRN), tropCorr(svPRN), mElAz(svPRN, 1), mElAz(svPRN, 2)] = ...
                 getPropCorr(mSatPos(svPRN, :), pvt, ionoA, ionoB, epochTime, epochDoY);
-            corr    =   ionoCorr(svPRN) + tropoCorr(svPRN) - c*tCorr(svPRN);
+            corr    =   ionoCorr(svPRN) + tropCorr(svPRN) - c*tCorr(svPRN);
             
             prCorr(iSat)  =   pr(svPRN) - corr;
             
