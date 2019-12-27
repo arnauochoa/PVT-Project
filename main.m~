@@ -26,7 +26,7 @@ nEpoch_max = length(ObsData.DATA); % For all epochs -> length(ObsData.DATA)
 
 RefPos      =   ObsData.HEADER.ANTENNA.POSITION;
 refPosXYZ   =   [RefPos.x_ECEF, RefPos.y_ECEF, RefPos.z_ECEF];
-refPosLLH   =   xyz2llhDeg(refPosXYZ); 
+refPosLLH   =   rad2deg(xyz2llhDeg(refPosXYZ)); 
 refPosNEU   =   delta_wgs84_2_local(refPosXYZ.', refPosXYZ.').';
 
 %% Data structures initialisation
@@ -57,7 +57,7 @@ for iEpoch = 1:nEpoch
         trackedPRN, mC1(iEpoch, :), mEphem, epochTime, epochDoY, pvt, ionoA, ionoB);
     
     mPosXYZ(iEpoch, :) = pvt(1:3);
-    mPosLLH(iEpoch, :) = xyz2llhDeg(mPosXYZ(iEpoch, :));
+    mPosLLH(iEpoch, :) = rad2deg(f_xyz_2_llh(mPosXYZ(iEpoch, :)));
     tBias(iEpoch) = pvt(4);
     a=0;
 end
