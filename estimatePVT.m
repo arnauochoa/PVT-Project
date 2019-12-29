@@ -1,4 +1,4 @@
-function [pvt, ionoCorr, tropCorr] = ...
+function [pvt, timeCorr, ionoCorr, tropCorr] = ...
     estimatePVT(trackedPRN, pr, mEphem, epochTime, epochDoY, pvt0, ionoA, ionoB)
 % ---------------------------------------------------------------------------------------
 % This function estimates the position and time bias of the user at a given
@@ -36,9 +36,9 @@ function [pvt, ionoCorr, tropCorr] = ...
     iter            =   1;
     maxIter         =   10;
     
-    tCorr           =   zeros(32, 1);
+    timeCorr           =   zeros(32, 1);
     ionoCorr        =   zeros(32, 1);
-    tropCorr       =   zeros(32, 1);
+    tropCorr        =   zeros(32, 1);
     mSatPos         =   nan(32, 3);
     mElAz           =   zeros(32, 2);
     
@@ -51,14 +51,14 @@ function [pvt, ionoCorr, tropCorr] = ...
                 % satellite
                 satEphem                =   SelectEphemeris(mEphem, svPRN, epochTime);
                 
-                [txTime, tCorr(svPRN)]  =   getSatTxTime(satEphem, epochTime, pr(svPRN));
+                [txTime, timeCorr(svPRN)]  =   getSatTxTime(satEphem, epochTime, pr(svPRN));
                 mSatPos(svPRN, :)       =   getSatPos(satEphem, txTime, epochTime);
             end
             
             % Apply corrections
             [ionoCorr(svPRN), tropCorr(svPRN), mElAz(svPRN, 1), mElAz(svPRN, 2)] = ...
                 getPropCorr(mSatPos(svPRN, :), pvt, ionoA, ionoB, epochTime, epochDoY);
-            corr    =   ionoCorr(svPRN) + tropCorr(svPRN) - c*tCorr(svPRN);
+            corr    =   ionoCorr(svPRN) + tropCorr(svPRN) - timeCorr(svPRN);
             
             prCorr(iSat)  =   pr(svPRN) - corr;
             
@@ -83,7 +83,5 @@ function [pvt, ionoCorr, tropCorr] = ...
         % Check if values d(1:3) are lower than the convergence threshold
         hasConverged =  abs(prod(d(1:3))) < convThreshold; 
         iter        =   iter+1;
-    
-%         a = ionoCorr(find(ionoCorr))
     end
 end

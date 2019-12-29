@@ -13,8 +13,8 @@ addpath(genpath('Library'));
 % refPosLLH = [43.563450, 1.484557, 150]; % For measurements at football field
 
 %% FILE LOADING
-dataFileName    =   'Data/Structs/multipath_2.mat';
-isStatic        =   false;     % << Change this according to type of measurements
+dataFileName    =   'Data/Structs/givenData.mat';
+isStatic        =   true;     % << Change this according to type of measurements
 load(dataFileName);
 
 %% DATA EXTRACTION
@@ -35,6 +35,7 @@ pvt0        =   [refPosXYZ, 0];     % Initial guess
 mPosXYZ     =   zeros(nEpoch, 3);
 mPosLLH     =   zeros(nEpoch, 3);
 tBias       =   zeros(nEpoch, 1);
+timeCorr    =   zeros(32, nEpoch);
 ionoCorr    =   zeros(32, nEpoch);
 tropCorr    =   zeros(32, nEpoch);
 
@@ -49,7 +50,7 @@ for iEpoch = 1:nEpoch
 
         trackedPRN  =   checkSatHealth(trackedPRN, mEphem, epochTime);
     if vNumSat(iEpoch) >= 4
-        [pvt, ionoCorr(:, iEpoch), tropCorr(:, iEpoch)] =   estimatePVT(...
+        [pvt, timeCorr(:, iEpoch), ionoCorr(:, iEpoch), tropCorr(:, iEpoch)] = estimatePVT(...
             trackedPRN, mC1(iEpoch, :), mEphem, epochTime, epochDoY, pvt0, ionoA, ionoB);
         pvt0 = pvt;
     else
@@ -57,9 +58,9 @@ for iEpoch = 1:nEpoch
         ionoCorr(:, iEpoch)    =   nan(32, 1);
         tropCorr(:, iEpoch)    =   nan(32, 1);
     end
-    mPosXYZ(iEpoch, :) = pvt(1:3);
-    mPosLLH(iEpoch, :) = xyz2llhDeg(mPosXYZ(iEpoch, :));
-    tBias(iEpoch) = pvt(4);
+    mPosXYZ(iEpoch, :)  =   pvt(1:3);
+    mPosLLH(iEpoch, :)  =   xyz2llhDeg(mPosXYZ(iEpoch, :));
+    tBias(iEpoch)       =   pvt(4);
 end
 
 %% COORDINATES CONVERSION
