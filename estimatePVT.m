@@ -1,4 +1,5 @@
-function [pvt, ionoCorr, tropoCorr] = estimatePVT(trackedPRN, pr, mEphem, epochTime, pvt0, ionoA, ionoB)
+function [pvt, timeCorr, ionoCorr, tropCorr] = ...
+    estimatePVT(trackedPRN, pr, mEphem, epochTime, epochDoY, pvt0, ionoA, ionoB)
 % ---------------------------------------------------------------------------------------
 % This function estimates the position and time bias of the user at a given
 % epoch using the standard LS estimation method.
@@ -8,6 +9,7 @@ function [pvt, ionoCorr, tropoCorr] = estimatePVT(trackedPRN, pr, mEphem, epochT
 %           pr:         vector containing the pseudorange of the satellites (32 x 1)
 %           mEphem:     Matrix containing the ephemeris information (numSat x 29)
 %           epochTime:  Corrected time of the current epoch as SoW
+%           epochDoY:   Day of Year of current epoch
 %           pvt0:       Initial guess of pvt.
 %           ionoA:      Iono correction a-parameters (Iono_a = [a0,a1,a2,a3]) 
 %           ionoB:      Iono correction b-parameters (Iono_b = [b0,b1,b2,b3])
@@ -34,9 +36,9 @@ function [pvt, ionoCorr, tropoCorr] = estimatePVT(trackedPRN, pr, mEphem, epochT
     iter            =   1;
     maxIter         =   10;
     
-    tCorr           =   zeros(32, 1);
+    timeCorr           =   zeros(32, 1);
     ionoCorr        =   zeros(32, 1);
-    tropoCorr       =   zeros(32, 1);
+    tropCorr        =   zeros(32, 1);
     mSatPos         =   nan(32, 3);
     mElAz           =   zeros(32, 2);
     
@@ -49,14 +51,14 @@ function [pvt, ionoCorr, tropoCorr] = estimatePVT(trackedPRN, pr, mEphem, epochT
                 % satellite
                 satEphem                =   SelectEphemeris(mEphem, svPRN, epochTime);
                 
-                [txTime, tCorr(svPRN)]  =   getSatTxTime(satEphem, epochTime, pr(svPRN));
+                [txTime, timeCorr(svPRN)]  =   getSatTxTime(satEphem, epochTime, pr(svPRN));
                 mSatPos(svPRN, :)       =   getSatPos(satEphem, txTime, epochTime);
             end
             
             % Apply corrections
-            [ionoCorr(svPRN), tropoCorr(svPRN), mElAz(svPRN, 1), mElAz(svPRN, 2)] = ...
-                getPropCorr(mSatPos(svPRN, :), pvt, ionoA, ionoB, epochTime);
-            corr    =   ionoCorr(svPRN) + tropoCorr(svPRN) - c*tCorr(svPRN);
+            [ionoCorr(svPRN), tropCorr(svPRN), mElAz(svPRN, 1), mElAz(svPRN, 2)] = ...
+                getPropCorr(mSatPos(svPRN, :), pvt, ionoA, ionoB, epochTime, epochDoY);
+            corr    =   ionoCorr(svPRN) + tropCorr(svPRN) - timeCorr(svPRN);
             
             prCorr(iSat)  =   pr(svPRN) - corr;
             
@@ -81,6 +83,5 @@ function [pvt, ionoCorr, tropoCorr] = estimatePVT(trackedPRN, pr, mEphem, epochT
         % Check if values d(1:3) are lower than the convergence threshold
         hasConverged =  abs(prod(d(1:3))) < convThreshold; 
         iter        =   iter+1;
-
     end
 end

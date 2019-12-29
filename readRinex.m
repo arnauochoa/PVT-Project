@@ -10,12 +10,11 @@ clear;
 
 %% FILES SPECIFICATION
 % Observation and Navigation RINEX files
-% 'Data/Given-Meas/COM3_191005_110113_pedestrian_mp.obs';
-obsFilePath     =   'Data/Given-Meas/COM44_150205_094639.obs';
-navFilePath     =   'Data/Given-Meas/COM44_150205_094639.nav';
+obsFilePath     =   'Data/Pedestrian_MP/COM3_191005_110113_pedestrian_mp.obs';
+navFilePath     =   'Data/Pedestrian_MP/tlse2780.19n';
 
 % Specification of the output file's directory and name, .mat extension.
-dataFileName    =   'Data/Structs/givenData.mat';
+dataFileName    =   'Data/Structs/multipath_2.mat';
 
 %% READING OF FILES
 % Reading RINEX files into Structures
