@@ -12,15 +12,15 @@ addpath(genpath('Library'));
 set(groot,'defaultLineLineWidth',0.8)
 % plotObsData;
 %% CONSTANTS
-global nSats weightMode
-
+global nSats;
 nSats               =   32;         % Total number of satellites  
 mkSize              =   12;         % Marker size for plots
 mColors             =   jet(nSats); % Create set of different colors for plotting. 1 sat - 1 color. 
 
 %% CONFIG PARAMS
-weightMode          =   3;          % Valid values: 1 to 5. See getWeight for more details
 removeSats          =  [23 27 28 10];
+global weightType;          % Valid values: 1 to 5. See getWeight for more details
+weightType      =   1;
 
 %% FILE LOADING
 dataFileName        =   'Data/Structs/static.mat';

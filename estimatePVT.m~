@@ -23,7 +23,8 @@ function [pvt, timeCorr, ionoCorr, tropCorr, mSatPos, dop] = ...
 %           dop:        Vector with the DOP values (dop = [DOPe DOPn DOPv DOPt])
 % ---------------------------------------------------------------------------------------
 
-    global nSats weightMode
+    %% CONSTANTS
+%     c       =   299792458;       %   Speed of light (m/s)
 
     %% INITIALISATION OF VARIABLES
     nTrackedSat     =   length(trackedPRN);
@@ -39,11 +40,11 @@ function [pvt, timeCorr, ionoCorr, tropCorr, mSatPos, dop] = ...
     iter            =   1;
     maxIter         =   10;
     
-    timeCorr        =   zeros(nSats, 1);
-    ionoCorr        =   zeros(nSats, 1);
-    tropCorr        =   zeros(nSats, 1);
-    mSatPos         =   nan(nSats, 3);
-    mElAz           =   zeros(nSats, 2);
+    timeCorr        =   zeros(32, 1);
+    ionoCorr        =   zeros(32, 1);
+    tropCorr        =   zeros(32, 1);
+    mSatPos         =   nan(32, 3);
+    mElAz           =   zeros(32, 2);
     
     %% ITERATIVE LS ESTIMATION
     while ~hasConverged && iter <= maxIter
@@ -58,7 +59,7 @@ function [pvt, timeCorr, ionoCorr, tropCorr, mSatPos, dop] = ...
                 mSatPos(svPRN, :)       =   getSatPos(satEphem, txTime, epochTime);
             end
             [el, ~]         =   elevation_azimuth(pvt(1:3), mSatPos(svPRN, :));
-            weights(iSat)   =   getWeight(el, cn0(svPRN), weightMode);
+            weights(iSat)   =   getWeight(el, cn0(svPRN), 1);
             
             % Apply corrections
             [ionoCorr(svPRN), tropCorr(svPRN), mElAz(svPRN, 1), mElAz(svPRN, 2)] = ...
@@ -81,8 +82,8 @@ function [pvt, timeCorr, ionoCorr, tropCorr, mSatPos, dop] = ...
             mH(iSat, :) = [ax ay az 1];
         end
         % LS estimation of PVT at iteration iter
-        mW          =   diag(weights);
-        d           =   (mH.' * mW * mH) \ mH.' *  mW * p;
+        mW          =   diag(
+        d           =   pinv(mH) * p;
         pvt(1:3)    =   pvt(1:3) + d(1:3).';
         pvt(4)      =   d(4);
         
