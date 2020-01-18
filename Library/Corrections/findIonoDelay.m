@@ -1,4 +1,4 @@
-function [delay]    =   findIonoDelay(posLatLng, el, az, epochTime, ionoA, ionoB)
+function [delay]    =   findIonoDelay(posLatLng, el, az, epochTime, iono)
 % ---------------------------------------------------------------------------------------
 % This function estimates the propagation delay due to the ionosphere by
 % using the Klobuchar model.
@@ -8,8 +8,7 @@ function [delay]    =   findIonoDelay(posLatLng, el, az, epochTime, ionoA, ionoB
 %           el:        	Elevation of the satellite. [rad]
 %           az:         Azimuth of the satellite. [rad]
 %           epochTime:  Time of the current epoch. [SoW]
-%           ionoA:      Iono correction a-parameters (Iono_a = [a0,a1,a2,a3]) 
-%           ionoB:      Iono correction b-parameters (Iono_b = [b0,b1,b2,b3])
+%           iono:       Iono correction a and b parameters (iono = [a0,a1,a2,a3,b0,b1,b2,b3]) 
 %
 % Output:
 %           ionoCorr:   Ionospheric delay [s]
@@ -20,14 +19,14 @@ function [delay]    =   findIonoDelay(posLatLng, el, az, epochTime, ionoA, ionoB
 	delay   =   zeros(size(el));
     
     %ionospheric parameters
-	a0      =   ionoA(1);
-	a1      =   ionoA(2);
-	a2      =   ionoA(3);
-	a3      =   ionoA(4);
-	b0      =   ionoB(1);
-	b1      =   ionoB(2);
-	b2      =   ionoB(3);
-	b3      =   ionoB(4);
+	a0      =   iono(1);
+	a1      =   iono(2);
+	a2      =   iono(3);
+	a3      =   iono(4);
+	b0      =   iono(5);
+	b1      =   iono(6);
+	b2      =   iono(7);
+	b3      =   iono(8);
     
     %elevation from 0 to 90 degrees
 	el      =   abs(el);

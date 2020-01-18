@@ -1,4 +1,4 @@
-function [ionoCorr, tropoCorr, el, az]    =   getPropCorr(satPos, pvt, ionoA, ionoB, epochTime, epochDoY)
+function [ionoCorr, tropoCorr, el, az]    =   getPropCorr(satPos, pvt, iono, epochTime, epochDoY)
 % ---------------------------------------------------------------------------------------
 % This function estimates the position and time bias of the user at a given
 % epoch using the standard LS estimation method.
@@ -6,8 +6,7 @@ function [ionoCorr, tropoCorr, el, az]    =   getPropCorr(satPos, pvt, ionoA, io
 % Input:  
 %           satpos:     Position of the satellite.
 %           pvt:        PVT of the user.
-%           ionoA:      Iono correction a-parameters (Iono_a = [a0,a1,a2,a3]) 
-%           ionoB:      Iono correction b-parameters (Iono_b = [b0,b1,b2,b3])
+%           iono:       Iono correction a and b parameters (iono = [a0,a1,a2,a3,b0,b1,b2,b3]) 
 %           epochTime:  Corrected time of the current epoch as SoW
 %           epochDoY:   Day of Year of current epoch
 %
@@ -25,5 +24,5 @@ function [ionoCorr, tropoCorr, el, az]    =   getPropCorr(satPos, pvt, ionoA, io
     
     tropoCorr   =   UNB3M(posLLH(1), 100, epochDoY, el); % TODO: Watch height
 
-    ionoCorr    =   findIonoDelay(rad2deg(posLLH(1:2)), rad2deg(el), rad2deg(az), epochTime, ionoA, ionoB);
+    ionoCorr    =   findIonoDelay(rad2deg(posLLH(1:2)), rad2deg(el), rad2deg(az), epochTime, iono);
 end
