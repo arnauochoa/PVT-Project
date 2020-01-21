@@ -1,18 +1,20 @@
-function [pvt, timeCorr, ionoCorr, tropCorr, mSatPos, dop] = ...
-    estimatePVT(trackedPRN, pr, mEphem, epochTime, epochDoY, pvt0, iono, cn0)
+function [pvt, timeCorr, ionoCorr, tropCorr, mSatPos, dop, usedPRN] = ...
+    estimatePVT(usedPRN, pr, mEphem, epochTime, epochDoY, pvt0, iono, cn0, elevMask, cn0Mask)
 % ---------------------------------------------------------------------------------------
 % This function estimates the position and time bias of the user at a given
 % epoch using the standard LS estimation method.
 % 
 % Input:  
-%           trackedPRN: Vector containing the numbers of the tracked satellites
+%           usedPRN:    Vector containing the numbers of the used satellites
 %           pr:         vector containing the pseudorange of the satellites (32 x 1)
 %           mEphem:     Matrix containing the ephemeris information (numSat x 29)
 %           epochTime:  Corrected time of the current epoch as SoW
 %           epochDoY:   Day of Year of current epoch
 %           pvt0:       Initial guess of pvt.
 %           iono:       Iono correction a and b parameters (iono = [a0,a1,a2,a3,b0,b1,b2,b3]) 
-%           cn0:       Vector containing the C/N0 of all satellites at current epoch
+%           cn0:        Vector containing the C/N0 of all satellites at current epoch
+%           elevMask:   Elevation mask in degrees
+%           cn0Mask:    C/N0 mask in dB-Hz
 %
 % Output:
 %           pvt:        Vector with X-Y-Z coordinates and time bias.
@@ -26,12 +28,8 @@ function [pvt, timeCorr, ionoCorr, tropCorr, mSatPos, dop] = ...
     global nSats weightMode
 
     %% INITIALISATION OF VARIABLES
-    nTrackedSat     =   length(trackedPRN);
+    nUsedSat     =   length(usedPRN);
     
-    mH              =   zeros(nTrackedSat, 4);
-    p               =   zeros(nTrackedSat, 1);
-    prCorr          =   zeros(nTrackedSat, 1);
-    weights         =   zeros(nTrackedSat, 1);
     pvt             =   pvt0;
     
     hasConverged    =   0;
@@ -45,19 +43,32 @@ function [pvt, timeCorr, ionoCorr, tropCorr, mSatPos, dop] = ...
     mSatPos         =   nan(nSats, 3);
     mElAz           =   zeros(nSats, 2);
     
+    for iSat = 1:nUsedSat
+        svPRN   =   usedPRN(iSat);
+        % Find the valid ephemeris at the current epoch for the current
+        % satellite
+        satEphem                =   SelectEphemeris(mEphem, svPRN, epochTime);
+
+        [txTime, timeCorr(svPRN)]  =   getSatTxTime(satEphem, epochTime, pr(svPRN));
+        mSatPos(svPRN, :)       =   getSatPos(satEphem, txTime, epochTime);
+    end
+    % Applying mask
+    usedPRN = applyMask(usedPRN, mSatPos, pvt(1:3), cn0, elevMask, cn0Mask);
+    
+    nUsedSat     =   length(usedPRN);
+    
+    mH              =   zeros(nUsedSat, 4);
+    p               =   zeros(nUsedSat, 1);
+    prCorr          =   zeros(nUsedSat, 1);
+    weights         =   zeros(nUsedSat, 1);
+    
     %% ITERATIVE LS ESTIMATION
     while ~hasConverged && iter <= maxIter
-        for iSat = 1:nTrackedSat
-            svPRN   =   trackedPRN(iSat);
-            if(iter == 1)
-                % Find the valid ephemeris at the current epoch for the current
-                % satellite
-                satEphem                =   SelectEphemeris(mEphem, svPRN, epochTime);
-                
-                [txTime, timeCorr(svPRN)]  =   getSatTxTime(satEphem, epochTime, pr(svPRN));
-                mSatPos(svPRN, :)       =   getSatPos(satEphem, txTime, epochTime);
-            end
+        for iSat = 1:nUsedSat
+            svPRN   =   usedPRN(iSat);
+            
             [el, ~]         =   elevation_azimuth(pvt(1:3), mSatPos(svPRN, :));
+            
             weights(iSat)   =   getWeight(el, cn0(svPRN), weightMode);
             
             % Apply corrections

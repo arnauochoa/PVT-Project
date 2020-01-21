@@ -19,8 +19,10 @@ mkSize              =   12;         % Marker size for plots
 mColors             =   jet(nSats); % Create set of different colors for plotting. 1 sat - 1 color. 
 
 %% CONFIG PARAMS
-weightMode          =   3;          % Valid values: 1 to 5. See getWeight for more details
-removeSats          =  [23 27 28 10];
+weightMode          =   0;          % Valid values: 0 to 5. See getWeight for more details
+elevMask            =   0;          %  [deg]    Elevation mask
+cn0Mask             =   37;         % [dB-Hz]   C/N0 mask
+removeSats          =  [];
 
 %% FILE LOADING
 dataFileName        =   'Data/Structs/static.mat';
@@ -55,29 +57,32 @@ tropCorr    =   zeros(nSats, nEpoch);
 mElev       =   zeros(nEpoch, nSats);
 mAzim       =   zeros(nEpoch, nSats);
 mDOP        =   zeros(nEpoch, 4);
+mSatPos     =   nan(nSats, 3);
+mUsedSats   =   zeros(nEpoch, nSats);
 
 %% EPOCH LOOP
 for iEpoch = 1:nEpoch
-        % Find the PRNs of the tracked satellites at current epoch
-        trackedPRN  =   find(mTracked(iEpoch, :));
-        trackedPRN  =   setdiff(trackedPRN, removeSats);
+    % Find the PRNs of the tracked satellites at current epoch
+    trackedPRN  =   find(mTracked(iEpoch, :));
+    usedPRN     =   setdiff(trackedPRN, removeSats);
+    
+    % Rx time in seconds of week
+    epochTime   =   mEpoch(iEpoch, 2);
+    epochDoY    =   ymd2doy(mEpoch(iEpoch, 4:9).');
 
-        % Rx time in seconds of week
-        epochTime   =   mEpoch(iEpoch, 2);
-        epochDoY    =   ymd2doy(mEpoch(iEpoch, 4:9).');
-
-        trackedPRN  =   checkSatHealth(trackedPRN, mEphem, epochTime);
+    usedPRN  =   checkSatHealth(usedPRN, mEphem, epochTime);
+    mUsedSats(iEpoch, usedPRN)  =   1;
     if vNumSat(iEpoch) >= 4
-        [pvt, timeCorr(:, iEpoch), ionoCorr(:, iEpoch), tropCorr(:, iEpoch), mSatPos, mDOP(iEpoch, :)] = ...
-            estimatePVT(trackedPRN, mC1(iEpoch, :), mEphem, epochTime, epochDoY, pvt0, iono, mS1(iEpoch, :));
+        [pvt, timeCorr(:, iEpoch), ionoCorr(:, iEpoch), tropCorr(:, iEpoch), mSatPos, mDOP(iEpoch, :), usedPRN] = ...
+            estimatePVT(usedPRN , mC1(iEpoch, :), mEphem, epochTime, epochDoY, pvt0, iono, mS1(iEpoch, :), elevMask, cn0Mask);
         pvt0 = pvt;
     else
         pvt                    =   nan(1, 4);
         ionoCorr(:, iEpoch)    =   nan(32, 1);
         tropCorr(:, iEpoch)    =   nan(32, 1);
     end
-    for svPRN = trackedPRN
-        [elevRad, azimRad]   =  elevation_azimuth(refPosXYZ, mSatPos(svPRN, :));
+    for svPRN = usedPRN
+        [elevRad, azimRad]   =  elevation_azimuth(pvt0(1:3), mSatPos(svPRN, :));
         mElev(iEpoch, svPRN) =  rad2deg(elevRad);
         mAzim(iEpoch, svPRN) =  rad2deg(azimRad);
     end
@@ -107,10 +112,18 @@ plot(timeAxis, vDOP);
 xlabel('Epoch'); ylabel('DOP');
 legend({'HDOP', 'VDOP'}, 'Location', 'best');
 
+% Satellites use detail over time
+figure;
+spy(mUsedSats.', '.', 10);
+pbaspect([13 10 10]); % Changing axis' aspect ratio
+set(gca,'YTick',(1:1:nSats));
+title('Satellites use over time');
+xlabel('Epoch'); ylabel('Satellite');
+
 % Elevation of satellites in view
-mElevAny  =   mElev(:, any(mElev));   % Keeping columns of satellites from which there's C1
+mElevAny  =   mElev(:, any(mElev)); % Keeping columns of satellites from which there's elevation
 [~, col]  =   find(mElev);          
-satsElev  =   unique(col);          % Finding ids of the satellites from which there's S1
+satsElev  =   unique(col);          % Finding ids of the satellites from which there's elevation
 mElevAny(mElevAny==0) = nan;        % Changing values 0 for NaN so these aren't plotted
 figure;
 for sat = 1:length(satsElev)
@@ -123,9 +136,9 @@ legend(cellstr(num2str(satsElev)),'Location','bestoutside');
 xlabel('Epoch'); ylabel('Elevation [º]');
 
 % Azimuth of satellites in view
-mAzimAny  =   mAzim(:, any(mAzim));   % Keeping columns of satellites from which there's C1
+mAzimAny  =   mAzim(:, any(mAzim)); % Keeping columns of satellites from which there's azimuth
 [~, col]  =   find(mAzim);          
-satsAzim  =   unique(col);          % Finding ids of the satellites from which there's S1
+satsAzim  =   unique(col);          % Finding ids of the satellites from which there's azimuth
 mAzimAny(mAzimAny==0) = nan;        % Changing values 0 for NaN so these aren't plotted
 figure;
 for sat = 1:length(satsAzim)
