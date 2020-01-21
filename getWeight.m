@@ -13,6 +13,9 @@ function [w] = getWeight(elevation, cn0, type)
 %           w:        	Weight given to the satellite
 % ---------------------------------------------------------------------------------------
     switch(type)
+        case 0
+            % No weighting
+            w = 1;
         case 1
             % Sinusoidal weighting method [Rahemi, N., et al. "Accurate solution of navigation 
             % equations in GPS receivers for very high velocities using pseudorange measurements."]

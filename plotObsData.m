@@ -54,7 +54,7 @@ xlabel('Epoch'); ylabel('Satellite');
 % Pseudoranges of satellites in view
 mC1Any  =   mC1(:, any(mC1));   % Keeping columns of satellites from which there's C1
 [~, col]  =   find(mC1);          
-satsC1  =   unique(col);          % Finding ids of the satellites from which there's S1
+satsC1  =   unique(col);          % Finding ids of the satellites from which there's C1
 
 mC1Any(mC1Any==0) = nan;        % Changing values 0 for NaN so these aren't plotted
 
@@ -90,7 +90,7 @@ mL1m        =   mL1 .* c/fL1;         % Transformation from cycles to meters
 mCMC1       =   mC1 - mL1;            % CMC computation
 mCMC1Any    =   mCMC1(:, any(mCMC1)); % Finding numbers of satellites from which there's CMC
 [~, col]      =   find(mCMC1);          
-satsCMC1    =   unique(col);          % Finding ids of the satellites from which there's S1
+satsCMC1    =   unique(col);          % Finding ids of the satellites from which there's CMC
 
 mCMC1Res    =   mCMC1Any - mean(mCMC1Any, 2); % Subtract the average to get rid of the ambiguity
 
