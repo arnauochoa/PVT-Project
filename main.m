@@ -22,7 +22,7 @@ mColors             =   jet(nSats); % Create set of different colors for plottin
 weightMode          =   0;          % Valid values: 0 to 5. See getWeight for more details
 elevMask            =   0;          %  [deg]    Elevation mask
 cn0Mask             =   37;         % [dB-Hz]   C/N0 mask
-removeSats          =  [];
+removeSats          =  []; % [10 23 27 28];
 
 %% FILE LOADING
 dataFileName        =   'Data/Structs/static.mat';
@@ -102,6 +102,8 @@ pDOP        =   sqrt(mDOP(:, 1).^2 + mDOP(:, 2).^2 + mDOP(:, 3).^2);
 tDOP        =   mDOP(:, 4);
 gDOP        =   sqrt(mDOP(:, 1).^2 + mDOP(:, 2).^2 + mDOP(:, 3).^2 + mDOP(:, 4).^2);
 
+meanPosLLH  =   mean(mPosLLH);
+
 %% RESULT ANALYSIS
 timeAxis = 1:nEpoch;
 
@@ -161,7 +163,8 @@ xlabel('Epoch'); ylabel('Azimuth [º]');
 % NEU positions on maps
 figure;
 plot(mPosLLH(:,2), mPosLLH(:,1), '.b','MarkerSize',15); hold on;
-plot(refPosLLH(2), refPosLLH(1), '.r','MarkerSize',15);
+plot(refPosLLH(2), refPosLLH(1), '.r','MarkerSize',15); hold on;
+plot(meanPosLLH(2), meanPosLLH(1), '.y','MarkerSize',15);
 plot_google_map('MapScale', 1);
 xlabel('East [º]'); ylabel('North [º]');
 
