@@ -21,12 +21,12 @@ mColors             =   jet(nSats); % Create set of different colors for plottin
 %% CONFIG PARAMS
 weightMode          =   0;          % Valid values: 0 to 5. See getWeight for more details
 elevMask            =   0;          %  [deg]    Elevation mask
-cn0Mask             =   37;         % [dB-Hz]   C/N0 mask
-removeSats          =  []; % [10 23 27 28];
+cn0Mask             =   0;         % [dB-Hz]   C/N0 mask
+removeSats          =   [];     % [10 23 27 28];
 
 %% FILE LOADING
 dataFileName        =   'Data/Structs/static.mat';
-isStatic            =   true;     % << Change this according to type of measurements
+isStatic            =   false;     % << Change this according to type of measurements
 load(dataFileName);
 
 %% DATA EXTRACTION
@@ -71,16 +71,30 @@ for iEpoch = 1:nEpoch
     epochDoY    =   ymd2doy(mEpoch(iEpoch, 4:9).');
 
     usedPRN  =   checkSatHealth(usedPRN, mEphem, epochTime);
-    mUsedSats(iEpoch, usedPRN)  =   1;
-    if vNumSat(iEpoch) >= 4
-        [pvt, timeCorr(:, iEpoch), ionoCorr(:, iEpoch), tropCorr(:, iEpoch), mSatPos, mDOP(iEpoch, :), usedPRN] = ...
-            estimatePVT(usedPRN , mC1(iEpoch, :), mEphem, epochTime, epochDoY, pvt0, iono, mS1(iEpoch, :), elevMask, cn0Mask);
+    
+    [   pvt,                    ...
+        timeCorr(:, iEpoch),    ...
+        ionoCorr(:, iEpoch),    ...
+        tropCorr(:, iEpoch),    ...
+        mSatPos,                ...
+        mDOP(iEpoch, :),        ...
+        usedPRN                 ...
+    ] = estimatePVT(            ...
+        usedPRN,                ...
+        mC1(iEpoch, :),         ...
+        mEphem,                 ...
+        epochTime,              ...
+        epochDoY,               ...
+        pvt0,                   ...
+        iono,                   ...
+        mS1(iEpoch, :),         ...
+        elevMask,               ...
+        cn0Mask                 ...
+    );
+    if ~any(isnan(pvt))
         pvt0 = pvt;
-    else
-        pvt                    =   nan(1, 4);
-        ionoCorr(:, iEpoch)    =   nan(32, 1);
-        tropCorr(:, iEpoch)    =   nan(32, 1);
     end
+    mUsedSats(iEpoch, usedPRN)  =   1;
     for svPRN = usedPRN
         [elevRad, azimRad]   =  elevation_azimuth(pvt0(1:3), mSatPos(svPRN, :));
         mElev(iEpoch, svPRN) =  rad2deg(elevRad);
@@ -103,6 +117,13 @@ tDOP        =   mDOP(:, 4);
 gDOP        =   sqrt(mDOP(:, 1).^2 + mDOP(:, 2).^2 + mDOP(:, 3).^2 + mDOP(:, 4).^2);
 
 meanPosLLH  =   mean(mPosLLH);
+varPosNEU   =   var(mPosNEU);
+horError    =   sqrt(neuError(:, 1).^2 + neuError(:, 2).^2);
+errPrctile  =   prctile(horError, 90);
+estHorBias  =   sqrt((meanPosLLH(1)-refPosLLH(1))^2 + (meanPosLLH(2)-refPosLLH(2))^2);
+fprintf("Horizontal error at 90 Percentile: %f m\n", errPrctile);
+fprintf("Estimated bias: %f m\n", estHorBias);
+fprintf("Variances: \n\t North: %f m\n\t East: %f m\n\t Up: %f m\n", varPosNEU(1), varPosNEU(2), varPosNEU(3));
 
 %% RESULT ANALYSIS
 timeAxis = 1:nEpoch;
@@ -163,8 +184,8 @@ xlabel('Epoch'); ylabel('Azimuth [º]');
 % NEU positions on maps
 figure;
 plot(mPosLLH(:,2), mPosLLH(:,1), '.b','MarkerSize',15); hold on;
-plot(refPosLLH(2), refPosLLH(1), '.r','MarkerSize',15); hold on;
-plot(meanPosLLH(2), meanPosLLH(1), '.y','MarkerSize',15);
+plot(refPosLLH(2), refPosLLH(1), '.r','MarkerSize',18); hold on;
+plot(meanPosLLH(2), meanPosLLH(1), '.g','MarkerSize',18);
 plot_google_map('MapScale', 1);
 xlabel('East [º]'); ylabel('North [º]');
 

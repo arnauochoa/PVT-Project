@@ -97,9 +97,9 @@ mCMC1Any    =   mCMC1(:, any(mCMC1)); % Finding numbers of satellites from which
 satsCMC1    =   unique(col);          % Finding ids of the satellites from which there's CMC
 
 % Subtract the average to get rid of the ambiguity
-mCMC1Res    =   nan(nEpoch, length(satsCMC1));
-mCMC1Res(1:992, :)    =   mCMC1Any(1:992, :) - mean(mCMC1Any(1:992, :), 1); 
-mCMC1Res(993:end, :)  =   mCMC1Any(993:end, :) - mean(mCMC1Any(993:end, :), 1);
+mCMC1Res    =   nan(nEpoch, 
+mCMC1Res(1:992)    =   mCMC1Any(1:992, :) - mean(mCMC1Any(1:992, :), 1); 
+mCMC1Res(993:end)  =   mCMC1Any(993:end, :) - mean(mCMC1Any(993:end, :), 1);
 
 mCMC1Res(mCMC1Res==0) = nan;        % Changing values 0 for NaN so these aren't plotted
 

@@ -63,43 +63,54 @@ function [pvt, timeCorr, ionoCorr, tropCorr, mSatPos, dop, usedPRN] = ...
     weights         =   zeros(nUsedSat, 1);
     
     %% ITERATIVE LS ESTIMATION
-    while ~hasConverged && iter <= maxIter
-        for iSat = 1:nUsedSat
-            svPRN   =   usedPRN(iSat);
-            
-            [el, ~]         =   elevation_azimuth(pvt(1:3), mSatPos(svPRN, :));
-            
-            weights(iSat)   =   getWeight(el, cn0(svPRN), weightMode);
-            
-            % Apply corrections
-            [ionoCorr(svPRN), tropCorr(svPRN), mElAz(svPRN, 1), mElAz(svPRN, 2)] = ...
-                getPropCorr(mSatPos(svPRN, :), pvt, iono, epochTime, epochDoY);
-            corr    =   ionoCorr(svPRN) + tropCorr(svPRN) - timeCorr(svPRN);
-            
-            prCorr(iSat)  =   pr(svPRN) - corr;
-            
-            % Fill geometry matrix H and measurements vector p
-            d0      =   sqrt(   (mSatPos(svPRN, 1) - pvt(1))^2 + ...
-                                (mSatPos(svPRN, 2) - pvt(2))^2 + ...
-                                (mSatPos(svPRN, 3) - pvt(3))^2 );
+    if length(usedPRN)>= 4
+        while ~hasConverged && iter <= maxIter
+            for iSat = 1:nUsedSat
+                svPRN   =   usedPRN(iSat);
 
-            p(iSat) =   prCorr(iSat) - d0;
-            
-            ax      =   -(mSatPos(svPRN, 1) - pvt(1)) / d0;
-            ay      =   -(mSatPos(svPRN, 2) - pvt(2)) / d0;
-            az      =   -(mSatPos(svPRN, 3) - pvt(3)) / d0;
-            
-            mH(iSat, :) = [ax ay az 1];
+                [el, ~]         =   elevation_azimuth(pvt(1:3), mSatPos(svPRN, :));
+
+                weights(iSat)   =   getWeight(el, cn0(svPRN), weightMode);
+
+                % Apply corrections
+                [ionoCorr(svPRN), tropCorr(svPRN), mElAz(svPRN, 1), mElAz(svPRN, 2)] = ...
+                    getPropCorr(mSatPos(svPRN, :), pvt, iono, epochTime, epochDoY);
+                corr    =   ionoCorr(svPRN) + tropCorr(svPRN) - timeCorr(svPRN);
+
+                prCorr(iSat)  =   pr(svPRN) - corr;
+
+                % Fill geometry matrix H and measurements vector p
+                d0      =   sqrt(   (mSatPos(svPRN, 1) - pvt(1))^2 + ...
+                                    (mSatPos(svPRN, 2) - pvt(2))^2 + ...
+                                    (mSatPos(svPRN, 3) - pvt(3))^2 );
+
+                p(iSat) =   prCorr(iSat) - d0;
+
+                ax      =   -(mSatPos(svPRN, 1) - pvt(1)) / d0;
+                ay      =   -(mSatPos(svPRN, 2) - pvt(2)) / d0;
+                az      =   -(mSatPos(svPRN, 3) - pvt(3)) / d0;
+
+                mH(iSat, :) = [ax ay az 1];
+            end
+            % LS estimation of PVT at iteration iter
+            mW          =   diag(weights);
+            if cond(mH.' * mW * mH) > 1e10
+                cond(mH.' * mW * mH)
+            end
+            d           =   (mH.' * mW * mH) \ mH.' *  mW * p;
+            pvt(1:3)    =   pvt(1:3) + d(1:3).';
+            pvt(4)      =   d(4);
+
+            % Check if values d(1:3) are lower than the convergence threshold
+            hasConverged =  prod(abs(d(1:3)) < convThreshold); 
+            iter        =   iter+1;
         end
-        % LS estimation of PVT at iteration iter
-        mW          =   diag(weights);
-        d           =   (mH.' * mW * mH) \ mH.' *  mW * p;
-        pvt(1:3)    =   pvt(1:3) + d(1:3).';
-        pvt(4)      =   d(4);
-        
-        % Check if values d(1:3) are lower than the convergence threshold
-        hasConverged =  prod(abs(d(1:3)) < convThreshold); 
-        iter        =   iter+1;
+        dop = sqrt(diag(inv(mH'*mH)));
+    else
+        pvt         =   nan(1, 4);
+        dop         =   nan(1, 4);
+        timeCorr    =   nan(32, 1);
+        ionoCorr    =   nan(32, 1);
+        tropCorr    =   nan(32, 1);
     end
-    dop = sqrt(diag(inv(mH'*mH)));
 end

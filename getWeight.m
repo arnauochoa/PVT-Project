@@ -33,7 +33,7 @@ function [w] = getWeight(elevation, cn0, type)
             % C/N0+sinusoidal weighting method [Tay, Sarab, et al. "Weighting models for 
             % GPS Pseudorange observations for land transportation in urban canyons"]
         case 5
-            w   =   1*(10.^(-0.1*cn0))./tan(elevation * pi/180-0.1).^2;
+            w   =   1*(10.^(-0.1*cn0))./tan(elevation * pi/180).^2;
             % C/N0+tangential weighting method [Inspired by Satab Tay, et al. paper]
         otherwise
             error('The selected weighting method is not available')
