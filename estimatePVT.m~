@@ -74,15 +74,15 @@ function [pvt, timeCorr, ionoCorr, tropCorr, mSatPos, dop, usedPRN] = ...
         [ionoCorr(svPRN), tropCorr(svPRN), mElAz(svPRN, 1), mElAz(svPRN, 2)] = ...
             getPropCorr(mSatPos(svPRN, :), pvt, iono, epochTime, epochDoY);
         if any(strcmp(corrMode, 'clck'))
-            corr(svPRN)    =   corr(svPRN) - timeCorr(svPRN);
+            corr(svPRN)    =   corr - timeCorr(svPRN);
         end
         if any(strcmp(corrMode, 'iono'))
-            corr(svPRN)    =   corr(svPRN) + ionoCorr(svPRN);
+            corr(svPRN)    =   corr + ionoCorr(svPRN);
         end
         if any(strcmp(corrMode, 'tropo'))
-            corr(svPRN)    =   corr(svPRN) + tropoCorr(svPRN);
+            corr(svPRN)    =   corr + tropoCorr(svPRN);
         end
-        prCorr(iSat)  =   pr(svPRN) - corr(svPRN);
+        prCorr(iSat)  =   pr(svPRN) - corr;
     end
     
     %% ITERATIVE LS ESTIMATION

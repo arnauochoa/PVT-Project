@@ -21,8 +21,11 @@ function [ionoCorr, tropoCorr, el, az]    =   getPropCorr(satPos, pvt, iono, epo
     [el, az]    =   elevation_azimuth(pos, satPos);
     
     posLLH      =   xyz_2_lla_PVT(pvt(1:3));
-    
-    tropoCorr   =   UNB3M(posLLH(1), 100, epochDoY, el); % TODO: Watch height
+    height      =   posLLH(3);
+    if(height <= 0)
+        height  = 1;
+    end
+    tropoCorr   =   UNB3M(posLLH(1), height, epochDoY, el);
 
     ionoCorr    =   findIonoDelay(rad2deg(posLLH(1:2)), rad2deg(el), rad2deg(az), epochTime, iono);
 end
