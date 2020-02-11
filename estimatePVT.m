@@ -1,4 +1,4 @@
-function [pvt, timeCorr, ionoCorr, tropCorr, mSatPos, dop, usedPRN] = ...
+function [pvt, timeCorr, ionoCorr, tropCorr, mSatPos, xyztDOP, neuDOP, usedPRN] = ...
     estimatePVT(usedPRN, pr, mEphem, epochTime, epochDoY, pvt0, iono, cn0, elevMask, cn0Mask)
 % ---------------------------------------------------------------------------------------
 % This function estimates the position and time bias of the user at a given
@@ -22,7 +22,8 @@ function [pvt, timeCorr, ionoCorr, tropCorr, mSatPos, dop, usedPRN] = ...
 %           ionoCorr:   Vector with ionospheric corrections for all tracked satellites
 %           tropoCorr:  Vector with tropospheric corrections for all tracked satellites
 %           mSatPos:    Matrix with the satellites' positions
-%           dop:        Vector with the DOP values (dop = [DOPe DOPn DOPv DOPt])
+%           xyztDOP:    Vector with the XYZT DOP values (xyztDOP = [DOPx DOPy DOPz DOPt])
+%           neuDOP:     Vector with the NEU DOP values (neuDOP = [DOPn DOPe DOPu DOPt])
 % ---------------------------------------------------------------------------------------
 
     global nSats corrMode weightMode
@@ -95,8 +96,8 @@ function [pvt, timeCorr, ionoCorr, tropCorr, mSatPos, dop, usedPRN] = ...
                                     (mSatPos(svPRN, 2) - pvt(2))^2 + ...
                                     (mSatPos(svPRN, 3) - pvt(3))^2 );
 
-                pEst    =   d0 + pvt(4) + corr(svPRN);
-                p(iSat) =   pr(svPRN) - pEst;
+                pEst    =   d0 + pvt(4);
+                p(iSat) =   prCorr(iSat) - pEst;
 
                 ax      =   -(mSatPos(svPRN, 1) - pvt(1)) / d0;
                 ay      =   -(mSatPos(svPRN, 2) - pvt(2)) / d0;
@@ -117,10 +118,11 @@ function [pvt, timeCorr, ionoCorr, tropCorr, mSatPos, dop, usedPRN] = ...
             hasConverged =  prod(abs(d(1:3)) < convThreshold); 
             iter        =   iter+1;
         end
-        dop = sqrt(diag(inv(mH'*mH)));
+        [xyztDOP, neuDOP] = computeNEUDOP(pvt(1:3), mH);
     else
         pvt         =   nan(1, 4);
-        dop         =   nan(1, 4);
+        xyztDOP     =   nan(1, 4);
+        neuDOP      =   nan(1, 3);
         timeCorr    =   nan(32, 1);
         ionoCorr    =   nan(32, 1);
         tropCorr    =   nan(32, 1);

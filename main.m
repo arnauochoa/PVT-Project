@@ -23,11 +23,11 @@ corrMode            =   {'clck', 'iono', 'trop'};  % {'clck', 'iono', 'trop'}
 weightMode          =   0;          % Valid values: 0 to 5. See getWeight for more details
 elevMask            =   0;          %  [deg]    Elevation mask
 cn0Mask             =   0;         % [dB-Hz]   C/N0 mask
-removeSats          =   [];     % [10 23 27 28];
+removeSats          =   [10 23 27 28];     % [10 23 27 28];
 
 %% FILE LOADING
-dataFileName        =   'Data/Structs/multipath_2.mat';
-isStatic            =   false;     % << Change this according to type of measurements
+dataFileName        =   'Data/Structs/static.mat';
+isStatic            =   true;     % << Change this according to type of measurements
 load(dataFileName);
 
 %% DATA EXTRACTION
@@ -57,9 +57,11 @@ ionoCorr    =   zeros(nSats, nEpoch);
 tropCorr    =   zeros(nSats, nEpoch);
 mElev       =   zeros(nEpoch, nSats);
 mAzim       =   zeros(nEpoch, nSats);
-mDOP        =   zeros(nEpoch, 4);
+mXYZTDOP    =   zeros(nEpoch, 4);
+mNEUDOP     =   zeros(nEpoch, 3);
 mSatPos     =   nan(nSats, 3);
 mUsedSats   =   zeros(nEpoch, nSats);
+nUsedSats   =   zeros(nEpoch, 1);
 
 %% EPOCH LOOP
 for iEpoch = 1:nEpoch
@@ -78,7 +80,8 @@ for iEpoch = 1:nEpoch
         ionoCorr(:, iEpoch),    ...
         tropCorr(:, iEpoch),    ...
         mSatPos,                ...
-        mDOP(iEpoch, :),        ...
+        mXYZTDOP(iEpoch, :),    ...
+        mNEUDOP(iEpoch, :),     ...
         usedPRN                 ...
     ] = estimatePVT(            ...
         usedPRN,                ...
@@ -92,6 +95,7 @@ for iEpoch = 1:nEpoch
         elevMask,               ...
         cn0Mask                 ...
     );
+    nUsedSats(iEpoch) = length(usedPRN);
     if ~any(isnan(pvt))
         pvt0 = pvt;
     end
@@ -112,11 +116,11 @@ mPosNEU = delta_wgs84_2_local(mPosXYZ.', refPosXYZ.').';
 %% PREFORMANCE METRICS
 neuError    =   mPosNEU - refPosNEU;
 xyzError    =   mPosXYZ - refPosXYZ;
-hDOP        =   sqrt(mDOP(:, 1).^2 + mDOP(:, 2).^2);
-vDOP        =   mDOP(:,3);   
-pDOP        =   sqrt(mDOP(:, 1).^2 + mDOP(:, 2).^2 + mDOP(:, 3).^2);
-tDOP        =   mDOP(:, 4);
-gDOP        =   sqrt(mDOP(:, 1).^2 + mDOP(:, 2).^2 + mDOP(:, 3).^2 + mDOP(:, 4).^2);
+hDOP        =   sqrt(mNEUDOP(:, 1).^2 + mNEUDOP(:, 2).^2);
+vDOP        =   mNEUDOP(:,3);   
+pDOP        =   sqrt(mXYZTDOP(:, 1).^2 + mXYZTDOP(:, 2).^2 + mXYZTDOP(:, 3).^2);
+tDOP        =   mXYZTDOP(:, 4);
+gDOP        =   sqrt(mXYZTDOP(:, 1).^2 + mXYZTDOP(:, 2).^2 + mXYZTDOP(:, 3).^2 + mXYZTDOP(:, 4).^2);
 
 meanPosLLH  =   mean(mPosLLH);
 stdPosNEU   =   std(mPosNEU);
@@ -130,12 +134,15 @@ fprintf("Horizontal error at 95 Percentile: Lat = %f m; Lon = %f m\n", errPrctil
 fprintf("Estimated bias: %f m\n", estHorBias);
 fprintf("STD: \n\t North: %f m\n\t East: %f m\n\t Up: %f m\n", stdPosNEU(1), stdPosNEU(2), stdPosNEU(3));
 
+% meanPosXYZ  =   mean(mPosXYZ);
+% stdPosXYZ   =   std(mPosXYZ);
+% fprintf("STD: \n\t X: %f m\n\t Y: %f m\n\t Z: %f m\n", stdPosXYZ(1), stdPosXYZ(2), stdPosXYZ(3));
 
-meanPosXYZ  =   mean(mPosXYZ);
-stdPosXYZ   =   std(mPosXYZ);
-fprintf("STD: \n\t X: %f m\n\t Y: %f m\n\t Z: %f m\n", stdPosXYZ(1), stdPosXYZ(2), stdPosXYZ(3));
+fprintf("DOP: \t\t MIN \t MAX \n\tHDOP: %f \t %f \n\tVDOP: %f \t %f \n\tPDOP: %f \t %f \n", ...
+    min(hDOP), max(hDOP), min(vDOP), max(vDOP), min(pDOP), max(pDOP));
+fprintf("Number of used satellites: %d - %d\n", min(nUsedSats), max(nUsedSats));
 
-%% RESULT ANALYSIS
+% RESULT ANALYSIS
 timeAxis = 1:nEpoch;
 
 % HDOP VDOP over time
@@ -146,27 +153,27 @@ xlabel('Epoch'); ylabel('DOP');
 legend({'HDOP', 'VDOP'}, 'Location', 'best');
 % 
 % % Satellites use detail over time
-% figure;
-% spy(mUsedSats.', '.', 10);
-% pbaspect([13 10 10]); % Changing axis' aspect ratio
-% set(gca,'YTick',(1:1:nSats));
-% title('Satellites use over time');
-% xlabel('Epoch'); ylabel('Satellite');
+figure;
+spy(mUsedSats.', '.', 10);
+pbaspect([13 10 10]); % Changing axis' aspect ratio
+set(gca,'YTick',(1:1:nSats));
+title('Satellites use over time');
+xlabel('Epoch'); ylabel('Satellite');
 
 % Elevation of satellites in view
-% mElevAny  =   mElev(:, any(mElev)); % Keeping columns of satellites from which there's elevation
-% [~, col]  =   find(mElev);          
-% satsElev  =   unique(col);          % Finding ids of the satellites from which there's elevation
-% mElevAny(mElevAny==0) = nan;        % Changing values 0 for NaN so these aren't plotted
-% figure;
-% for sat = 1:length(satsElev)
-%     plot(timeAxis, mElevAny(:, sat).', '.',  'MarkerSize', mkSize,'color', mColors(satsElev(sat), :)); 
-%     hold on
-% end
-% hold off
-% legend(cellstr(num2str(satsElev)),'Location','bestoutside');
-% % title('Evolution of satellites elevations over time');
-% xlabel('Epoch'); ylabel('Elevation [º]');
+mElevAny  =   mElev(:, any(mElev)); % Keeping columns of satellites from which there's elevation
+[~, col]  =   find(mElev);          
+satsElev  =   unique(col);          % Finding ids of the satellites from which there's elevation
+mElevAny(mElevAny==0) = nan;        % Changing values 0 for NaN so these aren't plotted
+figure;
+for sat = 1:length(satsElev)
+    plot(timeAxis, mElevAny(:, sat).', '.',  'MarkerSize', mkSize,'color', mColors(satsElev(sat), :)); 
+    hold on
+end
+hold off
+legend(cellstr(num2str(satsElev)),'Location','bestoutside');
+% title('Evolution of satellites elevations over time');
+xlabel('Epoch'); ylabel('Elevation [º]');
 
 % % Azimuth of satellites in view
 % mAzimAny  =   mAzim(:, any(mAzim)); % Keeping columns of satellites from which there's azimuth
@@ -211,15 +218,15 @@ if isStatic % Plots only useful for static measurements
     xlabel('Epoch'); ylabel('Error [m]');
     legend('North', 'East', 'Up');
     
-%     % XYZ Error over time
-%     figure;
-%     plot(timeAxis, xyzError(:, 1), '.-'); hold on;
-%     plot(timeAxis, xyzError(:, 2), '.-'); hold on;
-%     plot(timeAxis, xyzError(:, 3), '.-');
-% %     title('NEU error over time');
-%     xlabel('Epoch'); ylabel('Error [m]');
-%     legend('X', 'Y', 'Z');
-%     
+    % XYZ Error over time
+    figure;
+    plot(timeAxis, xyzError(:, 1), '.-'); hold on;
+    plot(timeAxis, xyzError(:, 2), '.-'); hold on;
+    plot(timeAxis, xyzError(:, 3), '.-');
+%     title('NEU error over time');
+    xlabel('Epoch'); ylabel('Error [m]');
+    legend('X', 'Y', 'Z');
+    
     % CDF Lat - Long
     figure;
     ecdf(abs(neuError(:, 1))); hold on;
@@ -228,11 +235,11 @@ if isStatic % Plots only useful for static measurements
     legend('Latitude', 'Longitude');
     xlabel('Coordinate error [m]');
 
-    % CDF Height
-%     figure;
-%     ecdf(abs(neuError(:, 3))); hold on;
-% %     title('CDF of error in Height');
-%     xlabel('Height error [m]');
+%    CDF Height
+    figure;
+    ecdf(abs(neuError(:, 3))); hold on;
+%     title('CDF of error in Height');
+    xlabel('Height error [m]');
 end
 
 

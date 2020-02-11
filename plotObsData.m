@@ -114,6 +114,16 @@ legend(cellstr(num2str(satsCMC1)),'Location','bestoutside');
 % title('Evolution of measured CMC - E(CMC) over time');
 xlabel('Epoch'); ylabel('CMC [m]');
 
+figure;
+for sat = 1:length(satsCMC1)
+    plot(tAxis, mCMC1(:, sat).', '.-', 'MarkerSize', mkSize, 'color', mColors(satsCMC1(sat), :)); 
+    hold on
+end
+hold off
+legend(cellstr(num2str(satsCMC1)),'Location','bestoutside');
+% title('Evolution of measured CMC - E(CMC) over time');
+xlabel('Epoch'); ylabel('CMC [m]');
+
 
 
 
