@@ -12,21 +12,22 @@ addpath(genpath('Library'));
 set(groot,'defaultLineLineWidth',0.8)
 % plotObsData;
 %% CONSTANTS
-global nSats weightMode
+global nSats weightMode corrMode
 
 nSats               =   32;         % Total number of satellites  
 mkSize              =   12;         % Marker size for plots
 mColors             =   jet(nSats); % Create set of different colors for plotting. 1 sat - 1 color. 
 
 %% CONFIG PARAMS
+corrMode            =   {'clck', 'iono', 'trop'};  % {'clck', 'iono', 'trop'}
 weightMode          =   0;          % Valid values: 0 to 5. See getWeight for more details
 elevMask            =   0;          %  [deg]    Elevation mask
 cn0Mask             =   0;         % [dB-Hz]   C/N0 mask
-removeSats          =   [];     % [10 23 27 28];
+removeSats          =   [10 23 27 28];     % [10 23 27 28];
 
 %% FILE LOADING
 dataFileName        =   'Data/Structs/static.mat';
-isStatic            =   false;     % << Change this according to type of measurements
+isStatic            =   true;     % << Change this according to type of measurements
 load(dataFileName);
 
 %% DATA EXTRACTION
@@ -38,7 +39,7 @@ nEpoch_max = length(ObsData.DATA); % For all epochs -> length(ObsData.DATA)
 [ionoA, ionoB, mEphem] = ExtractData_N(NavData.HEADER, NavData.DATA);
 iono        =   [ionoA, ionoB];
 
-RefPos      =   ObsData.HEADER.ANTENNA.POSITION;
+% RefPos      =   ObsData.HEADER.ANTENNA.POSITION;
 % refPosXYZ   =   [RefPos.x_ECEF, RefPos.y_ECEF, RefPos.z_ECEF];
 % refPosLLH   =   xyz2llhDeg(refPosXYZ); 
 % For measurements at football field
@@ -56,9 +57,11 @@ ionoCorr    =   zeros(nSats, nEpoch);
 tropCorr    =   zeros(nSats, nEpoch);
 mElev       =   zeros(nEpoch, nSats);
 mAzim       =   zeros(nEpoch, nSats);
-mDOP        =   zeros(nEpoch, 4);
+mXYZTDOP    =   zeros(nEpoch, 4);
+mNEUDOP     =   zeros(nEpoch, 3);
 mSatPos     =   nan(nSats, 3);
 mUsedSats   =   zeros(nEpoch, nSats);
+nUsedSats   =   zeros(nEpoch, 1);
 
 %% EPOCH LOOP
 for iEpoch = 1:nEpoch
@@ -77,7 +80,8 @@ for iEpoch = 1:nEpoch
         ionoCorr(:, iEpoch),    ...
         tropCorr(:, iEpoch),    ...
         mSatPos,                ...
-        mDOP(iEpoch, :),        ...
+        mXYZTDOP(iEpoch, :),    ...
+        mNEUDOP(iEpoch, :),     ...
         usedPRN                 ...
     ] = estimatePVT(            ...
         usedPRN,                ...
@@ -91,6 +95,7 @@ for iEpoch = 1:nEpoch
         elevMask,               ...
         cn0Mask                 ...
     );
+    nUsedSats(iEpoch) = length(usedPRN);
     if ~any(isnan(pvt))
         pvt0 = pvt;
     end
@@ -110,32 +115,44 @@ mPosNEU = delta_wgs84_2_local(mPosXYZ.', refPosXYZ.').';
 
 %% PREFORMANCE METRICS
 neuError    =   mPosNEU - refPosNEU;
-hDOP        =   sqrt(mDOP(:, 1).^2 + mDOP(:, 2).^2);
-vDOP        =   mDOP(:,3);   
-pDOP        =   sqrt(mDOP(:, 1).^2 + mDOP(:, 2).^2 + mDOP(:, 3).^2);
-tDOP        =   mDOP(:, 4);
-gDOP        =   sqrt(mDOP(:, 1).^2 + mDOP(:, 2).^2 + mDOP(:, 3).^2 + mDOP(:, 4).^2);
+xyzError    =   mPosXYZ - refPosXYZ;
+hDOP        =   sqrt(mNEUDOP(:, 1).^2 + mNEUDOP(:, 2).^2);
+vDOP        =   mNEUDOP(:,3);   
+pDOP        =   sqrt(mXYZTDOP(:, 1).^2 + mXYZTDOP(:, 2).^2 + mXYZTDOP(:, 3).^2);
+tDOP        =   mXYZTDOP(:, 4);
+gDOP        =   sqrt(mXYZTDOP(:, 1).^2 + mXYZTDOP(:, 2).^2 + mXYZTDOP(:, 3).^2 + mXYZTDOP(:, 4).^2);
 
 meanPosLLH  =   mean(mPosLLH);
-varPosNEU   =   var(mPosNEU);
+stdPosNEU   =   std(mPosNEU);
 horError    =   sqrt(neuError(:, 1).^2 + neuError(:, 2).^2);
-errPrctile  =   prctile(horError, 90);
+errPrctile  =   prctile(horError, 95);
+errPrctileLat  =   prctile(neuError(:, 1), 95);
+errPrctileLon  =   prctile(neuError(:, 2), 95);
 estHorBias  =   sqrt((meanPosLLH(1)-refPosLLH(1))^2 + (meanPosLLH(2)-refPosLLH(2))^2);
-fprintf("Horizontal error at 90 Percentile: %f m\n", errPrctile);
+fprintf("Horizontal error at 95 Percentile: %f m\n", errPrctile);
+fprintf("Horizontal error at 95 Percentile: Lat = %f m; Lon = %f m\n", errPrctileLat, errPrctileLon);
 fprintf("Estimated bias: %f m\n", estHorBias);
-fprintf("Variances: \n\t North: %f m\n\t East: %f m\n\t Up: %f m\n", varPosNEU(1), varPosNEU(2), varPosNEU(3));
+fprintf("STD: \n\t North: %f m\n\t East: %f m\n\t Up: %f m\n", stdPosNEU(1), stdPosNEU(2), stdPosNEU(3));
 
-%% RESULT ANALYSIS
+% meanPosXYZ  =   mean(mPosXYZ);
+% stdPosXYZ   =   std(mPosXYZ);
+% fprintf("STD: \n\t X: %f m\n\t Y: %f m\n\t Z: %f m\n", stdPosXYZ(1), stdPosXYZ(2), stdPosXYZ(3));
+
+fprintf("DOP: \t\t MIN \t MAX \n\tHDOP: %f \t %f \n\tVDOP: %f \t %f \n\tPDOP: %f \t %f \n", ...
+    min(hDOP), max(hDOP), min(vDOP), max(vDOP), min(pDOP), max(pDOP));
+fprintf("Number of used satellites: %d - %d\n", min(nUsedSats), max(nUsedSats));
+
+% RESULT ANALYSIS
 timeAxis = 1:nEpoch;
 
-% Number of tracked satellites over time
+% HDOP VDOP over time
 figure;
 plot(timeAxis, hDOP); hold on;
 plot(timeAxis, vDOP);
 xlabel('Epoch'); ylabel('DOP');
 legend({'HDOP', 'VDOP'}, 'Location', 'best');
-
-% Satellites use detail over time
+% 
+% % Satellites use detail over time
 figure;
 spy(mUsedSats.', '.', 10);
 pbaspect([13 10 10]); % Changing axis' aspect ratio
@@ -158,20 +175,20 @@ legend(cellstr(num2str(satsElev)),'Location','bestoutside');
 % title('Evolution of satellites elevations over time');
 xlabel('Epoch'); ylabel('Elevation [º]');
 
-% Azimuth of satellites in view
-mAzimAny  =   mAzim(:, any(mAzim)); % Keeping columns of satellites from which there's azimuth
-[~, col]  =   find(mAzim);          
-satsAzim  =   unique(col);          % Finding ids of the satellites from which there's azimuth
-mAzimAny(mAzimAny==0) = nan;        % Changing values 0 for NaN so these aren't plotted
-figure;
-for sat = 1:length(satsAzim)
-    plot(timeAxis, mAzimAny(:, sat).', '.',  'MarkerSize', mkSize,'color', mColors(satsAzim(sat), :)); 
-    hold on
-end
-hold off
-legend(cellstr(num2str(satsAzim)),'Location','bestoutside');
-% title('Evolution of satellites azimuth over time');
-xlabel('Epoch'); ylabel('Azimuth [º]');
+% % Azimuth of satellites in view
+% mAzimAny  =   mAzim(:, any(mAzim)); % Keeping columns of satellites from which there's azimuth
+% [~, col]  =   find(mAzim);          
+% satsAzim  =   unique(col);          % Finding ids of the satellites from which there's azimuth
+% mAzimAny(mAzimAny==0) = nan;        % Changing values 0 for NaN so these aren't plotted
+% figure;
+% for sat = 1:length(satsAzim)
+%     plot(timeAxis, mAzimAny(:, sat).', '.',  'MarkerSize', mkSize,'color', mColors(satsAzim(sat), :)); 
+%     hold on
+% end
+% hold off
+% legend(cellstr(num2str(satsAzim)),'Location','bestoutside');
+% % title('Evolution of satellites azimuth over time');
+% xlabel('Epoch'); ylabel('Azimuth [º]');
 
 % NEU Error
 % figure;
@@ -184,8 +201,10 @@ xlabel('Epoch'); ylabel('Azimuth [º]');
 % NEU positions on maps
 figure;
 plot(mPosLLH(:,2), mPosLLH(:,1), '.b','MarkerSize',15); hold on;
-plot(refPosLLH(2), refPosLLH(1), '.r','MarkerSize',18); hold on;
-plot(meanPosLLH(2), meanPosLLH(1), '.g','MarkerSize',18);
+if isStatic
+    plot(refPosLLH(2), refPosLLH(1), '.r','MarkerSize',18); hold on;
+    plot(meanPosLLH(2), meanPosLLH(1), '.g','MarkerSize',18);
+end
 plot_google_map('MapScale', 1);
 xlabel('East [º]'); ylabel('North [º]');
 
@@ -195,9 +214,18 @@ if isStatic % Plots only useful for static measurements
     plot(timeAxis, neuError(:, 1), '.-'); hold on;
     plot(timeAxis, neuError(:, 2), '.-'); hold on;
     plot(timeAxis, neuError(:, 3), '.-');
-%     title('NEU error over time');
+    title('NEU error over time');
     xlabel('Epoch'); ylabel('Error [m]');
     legend('North', 'East', 'Up');
+    
+    % XYZ Error over time
+    figure;
+    plot(timeAxis, xyzError(:, 1), '.-'); hold on;
+    plot(timeAxis, xyzError(:, 2), '.-'); hold on;
+    plot(timeAxis, xyzError(:, 3), '.-');
+%     title('NEU error over time');
+    xlabel('Epoch'); ylabel('Error [m]');
+    legend('X', 'Y', 'Z');
     
     % CDF Lat - Long
     figure;
@@ -207,7 +235,7 @@ if isStatic % Plots only useful for static measurements
     legend('Latitude', 'Longitude');
     xlabel('Coordinate error [m]');
 
-    % CDF Height
+%    CDF Height
     figure;
     ecdf(abs(neuError(:, 3))); hold on;
 %     title('CDF of error in Height');

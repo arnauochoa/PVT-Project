@@ -20,7 +20,7 @@ fL1     =   1.57542e9;  %   [Hz]    Frequency of L1 band
 mkSize  =   12;         %    []     Marker size for plots
 
 %% FILE LOADING
-dataFileName = 'Data/Structs/static.mat';
+dataFileName = 'Data/Structs/multipath_2.mat';
 load(dataFileName);
 
 %% DATA EXTRACTION
@@ -60,7 +60,7 @@ mC1Any(mC1Any==0) = nan;        % Changing values 0 for NaN so these aren't plot
 
 figure;
 for sat = 1:length(satsC1)
-    plot(tAxis, mC1Any(:, sat).', '.',  'MarkerSize', mkSize,'color', mColors(satsC1(sat), :)); 
+    plot(tAxis, mC1Any(:, sat).', '-',  'MarkerSize', mkSize,'color', mColors(satsC1(sat), :)); 
     hold on
 end
 hold off
@@ -86,7 +86,7 @@ legend(cellstr(num2str(satsS1)),'Location','bestoutside');
 xlabel('Epoch'); ylabel('C/No [dB-Hz]');
 
 % CMC for satellites in view
-rmvSats     =   [10 23 28];
+rmvSats     =   [];
 mL1(:, rmvSats) = 0;
 mC1(:, rmvSats) = 0;
 
@@ -97,15 +97,26 @@ mCMC1Any    =   mCMC1(:, any(mCMC1)); % Finding numbers of satellites from which
 satsCMC1    =   unique(col);          % Finding ids of the satellites from which there's CMC
 
 % Subtract the average to get rid of the ambiguity
+clockJump   =   1856;
 mCMC1Res    =   nan(nEpoch, length(satsCMC1));
-mCMC1Res(1:992, :)    =   mCMC1Any(1:992, :) - mean(mCMC1Any(1:992, :), 1); 
-mCMC1Res(993:end, :)  =   mCMC1Any(993:end, :) - mean(mCMC1Any(993:end, :), 1);
+mCMC1Res(1:clockJump, :)    =   mCMC1Any(1:clockJump, :) - mean(mCMC1Any(1:clockJump, :), 1); 
+mCMC1Res(clockJump+1:end, :)  =   mCMC1Any(clockJump+1:end, :) - mean(mCMC1Any(clockJump+1:end, :), 1);
 
 mCMC1Res(mCMC1Res==0) = nan;        % Changing values 0 for NaN so these aren't plotted
 
 figure;
 for sat = 1:length(satsCMC1)
     plot(tAxis, mCMC1Res(:, sat).', '-', 'MarkerSize', mkSize, 'color', mColors(satsCMC1(sat), :)); 
+    hold on
+end
+hold off
+legend(cellstr(num2str(satsCMC1)),'Location','bestoutside');
+% title('Evolution of measured CMC - E(CMC) over time');
+xlabel('Epoch'); ylabel('CMC [m]');
+
+figure;
+for sat = 1:length(satsCMC1)
+    plot(tAxis, mCMC1(:, sat).', '.-', 'MarkerSize', mkSize, 'color', mColors(satsCMC1(sat), :)); 
     hold on
 end
 hold off
